@@ -5,16 +5,15 @@ import { ensureGuestSession } from './lib/auth'
 import App from './App.tsx'
 import './index.css'
 
-ensureGuestSession()
-  .then(() => {
-    createRoot(document.getElementById('root')!).render(
-      <StrictMode>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </StrictMode>,
-    )
-  })
-  .catch((err) => {
-    console.error('Failed to initialize session:', err)
-  })
+// Always render — auth failure shows an in-app banner rather than a blank page
+ensureGuestSession().catch((err) => {
+  console.error('Failed to initialize guest session:', err)
+})
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </StrictMode>,
+)
