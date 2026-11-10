@@ -120,45 +120,79 @@ alter table task_labels        enable row level security;
 alter table task_relationships enable row level security;
 alter table activity_log       enable row level security;
 
--- profiles
-create policy "profiles: own row only"
-  on profiles for all using (auth.uid() = id) with check (auth.uid() = id);
+-- Shared board: all authenticated users (including anonymous guests) can read
+-- everything. Writes are scoped to the creator (user_id = auth.uid()).
 
--- tasks
-create policy "tasks: own rows only"
-  on tasks for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- profiles: anyone can read; only own row is writable
+create policy "profiles: read all"
+  on profiles for select using (auth.uid() is not null);
 
--- labels
-create policy "labels: own rows only"
-  on labels for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "profiles: write own row"
+  on profiles for insert with check (auth.uid() = id);
 
--- task_labels (access granted if the parent task belongs to the user)
-create policy "task_labels: via task ownership"
-  on task_labels for all
-  using (exists (
-    select 1 from tasks where tasks.id = task_id and tasks.user_id = auth.uid()
-  ))
-  with check (exists (
+create policy "profiles: update own row"
+  on profiles for update using (auth.uid() = id);
+
+-- tasks: anyone can read; only creator can insert/update/delete
+create policy "tasks: read all"
+  on tasks for select using (auth.uid() is not null);
+
+create policy "tasks: write own rows"
+  on tasks for insert with check (auth.uid() = user_id);
+
+create policy "tasks: update own rows"
+  on tasks for update using (auth.uid() = user_id);
+
+create policy "tasks: delete own rows"
+  on tasks for delete using (auth.uid() = user_id);
+
+-- labels: anyone can read; only creator can write
+create policy "labels: read all"
+  on labels for select using (auth.uid() is not null);
+
+create policy "labels: write own rows"
+  on labels for insert with check (auth.uid() = user_id);
+
+create policy "labels: update own rows"
+  on labels for update using (auth.uid() = user_id);
+
+create policy "labels: delete own rows"
+  on labels for delete using (auth.uid() = user_id);
+
+-- task_labels: anyone can read; write gated on owning the parent task
+create policy "task_labels: read all"
+  on task_labels for select using (auth.uid() is not null);
+
+create policy "task_labels: write via task ownership"
+  on task_labels for insert with check (exists (
     select 1 from tasks where tasks.id = task_id and tasks.user_id = auth.uid()
   ));
 
--- task_relationships (access granted via the from_task)
-create policy "task_relationships: via task ownership"
-  on task_relationships for all
-  using (exists (
-    select 1 from tasks where tasks.id = from_task_id and tasks.user_id = auth.uid()
-  ))
-  with check (exists (
+create policy "task_labels: delete via task ownership"
+  on task_labels for delete using (exists (
+    select 1 from tasks where tasks.id = task_id and tasks.user_id = auth.uid()
+  ));
+
+-- task_relationships: anyone can read; write gated on owning the from_task
+create policy "task_relationships: read all"
+  on task_relationships for select using (auth.uid() is not null);
+
+create policy "task_relationships: write via task ownership"
+  on task_relationships for insert with check (exists (
     select 1 from tasks where tasks.id = from_task_id and tasks.user_id = auth.uid()
   ));
 
--- activity_log (access granted via the parent task)
-create policy "activity_log: via task ownership"
-  on activity_log for all
-  using (exists (
-    select 1 from tasks where tasks.id = task_id and tasks.user_id = auth.uid()
-  ))
-  with check (exists (
+create policy "task_relationships: delete via task ownership"
+  on task_relationships for delete using (exists (
+    select 1 from tasks where tasks.id = from_task_id and tasks.user_id = auth.uid()
+  ));
+
+-- activity_log: anyone can read; write gated on owning the parent task
+create policy "activity_log: read all"
+  on activity_log for select using (auth.uid() is not null);
+
+create policy "activity_log: write via task ownership"
+  on activity_log for insert with check (exists (
     select 1 from tasks where tasks.id = task_id and tasks.user_id = auth.uid()
   ));
 
