@@ -63,10 +63,10 @@ The items below are the remaining scope before the final submission.
 | # | Item | Notes |
 |---|---|---|
 | 1 | ~~Rename Settings → Labels~~ | Done |
-| 2 | Context cards — finish | Show context inline on task cards; answer editing polish |
-| 3 | Assignment | User can claim a task; avatar shown on card; filter by assignee |
+| 2 | ~Context cards — finish~ | Show context inline on task cards; answer editing polish |
+| 3 | ~Assignment~ | User can claim a task; avatar shown on card; filter by assignee |
 | 3b| Sign-In | When a user is signed in they should only see their tasks |
-| 4 | Task relationships | `blocked_by`, `waiting_on`, `subtask`, `details` between tasks |
+| 4 | ~Task relationships~ | `blocked_by`, `waiting_on`, `subtask`, `details` between tasks |
 | 5 | Completion trickle-down | Completing a task propagates state to dependent/blocked tasks |
 | 6 | Review panel | Wire real data into Recharts — status donut, completion over time, label breakdown |
 | 7 | Audit against docs | Cross-check recommendations, README, and assessment brief for gaps |

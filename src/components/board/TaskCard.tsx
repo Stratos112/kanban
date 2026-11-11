@@ -17,6 +17,8 @@ export interface TaskCardProps {
   parentTitle?: string
   blockedCount?: number
   waitingCount?: number
+  isParent?: boolean
+  isWaitingOnTask?: boolean
   isSelectable?: boolean
   onSelect?: () => void
 }
@@ -37,6 +39,8 @@ export default function TaskCard({
   parentTitle,
   blockedCount = 0,
   waitingCount = 0,
+  isParent = false,
+  isWaitingOnTask = false,
   isSelectable,
   onSelect,
 }: TaskCardProps) {
@@ -69,7 +73,7 @@ export default function TaskCard({
   }
 
   /* ── Full card for tasks and questions ── */
-  return (
+  const cardEl = (
     <div
       className={[
         styles.card,
@@ -78,6 +82,7 @@ export default function TaskCard({
         priority ? styles[`priority_${priority}`] : '',
         isBlocked ? styles.isBlocked : isWaiting ? styles.isWaiting : '',
         isSelectable ? styles.selectable : '',
+        isWaitingOnTask ? styles.hasZzz : '',
       ].filter(Boolean).join(' ')}
       onClick={isSelectable ? onSelect : undefined}
     >
@@ -147,6 +152,16 @@ export default function TaskCard({
           )}
         </div>
       </div>
+    </div>
+  )
+
+  if (!isParent) return cardEl
+
+  return (
+    <div className={styles.stackWrapper}>
+      <div className={styles.stackLayer2} aria-hidden />
+      <div className={styles.stackLayer1} aria-hidden />
+      {cardEl}
     </div>
   )
 }

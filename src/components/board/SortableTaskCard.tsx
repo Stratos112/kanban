@@ -8,9 +8,11 @@ interface Props extends TaskCardProps {
   onOpen?: () => void
   isSelectable?: boolean
   onSelect?: () => void
+  isParent?: boolean
+  isWaitingOnTask?: boolean
 }
 
-export default function SortableTaskCard({ id, onOpen, isSelectable, onSelect, ...props }: Props) {
+export default function SortableTaskCard({ id, onOpen, isSelectable, onSelect, isParent, isWaitingOnTask, ...props }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const didDrag = useRef(false)
 
@@ -35,14 +37,13 @@ export default function SortableTaskCard({ id, onOpen, isSelectable, onSelect, .
         transition,
         opacity: isDragging ? 0.25 : 1,
         cursor: isDragging ? 'grabbing' : isSelectable ? 'crosshair' : 'grab',
-        // Compensate for the column-level brightness(0.3) dim applied in linking mode
-        ...(isSelectable ? { filter: 'brightness(3.33)' } : {}),
+        ...(isSelectable ? { position: 'relative' as const, zIndex: 2 } : {}),
       }}
       onClick={handleClick}
       {...attributes}
       {...listeners}
     >
-      <TaskCard {...props} isSelectable={isSelectable} onSelect={onSelect} />
+      <TaskCard {...props} isSelectable={isSelectable} onSelect={onSelect} isParent={isParent} isWaitingOnTask={isWaitingOnTask} />
     </div>
   )
 }

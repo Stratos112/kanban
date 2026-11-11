@@ -438,6 +438,15 @@ export default function BoardPage() {
     setContextCards((prev) => prev.map((c) => c.id === id ? { ...c, ...changes } : c))
   }
 
+  async function handleDeleteLink(fromTaskId: string, toTaskId: string) {
+    if (!boardId) return
+    await Promise.all([
+      supabase.from('task_relationships').delete().eq('from_task_id', fromTaskId).eq('to_task_id', toTaskId),
+      supabase.from('task_relationships').delete().eq('from_task_id', toTaskId).eq('to_task_id', fromTaskId),
+    ])
+    await loadTasks(boardId)
+  }
+
   function handleEnterLinkMode(
     fromTaskId: string,
     fromRefKey: number,
@@ -584,6 +593,8 @@ export default function BoardPage() {
             const target = tasks.find((t) => t.id === l.toTaskId)
             return {
               id:           l.id,
+              fromTaskId:   l.fromTaskId,
+              toTaskId:     l.toTaskId,
               type:         LINK_DISPLAY[l.type]?.from ?? l.type,
               toTaskRefKey: target?.refKey ?? 0,
               toTaskTitle:  target?.title ?? '',
@@ -596,6 +607,8 @@ export default function BoardPage() {
             const target = tasks.find((t) => t.id === l.fromTaskId)
             return {
               id:           l.id + '_r',
+              fromTaskId:   l.fromTaskId,
+              toTaskId:     l.toTaskId,
               type:         LINK_DISPLAY[l.type]?.to ?? l.type,
               toTaskRefKey: target?.refKey ?? 0,
               toTaskTitle:  target?.title ?? '',
@@ -636,6 +649,55 @@ export default function BoardPage() {
           }}
           onClick={() => setLinkingState(null)}
         />
+      )}
+
+      {/* Linking mode — instruction banner */}
+      {linkingState && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 14,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 65,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '9px 10px 9px 16px',
+            background: 'rgba(10,18,32,0.96)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '10px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            fontFamily: 'var(--font-sans)',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'auto',
+          }}
+        >
+          <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' }}>
+            {linkingState.linkLabel}
+          </span>
+          <span style={{ color: 'rgba(255,255,255,0.25)' }}>·</span>
+          <span style={{ fontSize: '13px', fontWeight: 500, color: '#fff' }}>KAN-{linkingState.fromRefKey}</span>
+          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>— click a task to link</span>
+          <button
+            type="button"
+            style={{
+              marginLeft: '4px',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: '6px',
+              color: 'rgba(255,255,255,0.65)',
+              fontSize: '15px',
+              lineHeight: 1,
+              cursor: 'pointer',
+              padding: '3px 9px',
+            }}
+            onClick={() => setLinkingState(null)}
+            aria-label="Cancel linking"
+          >
+            ✕
+          </button>
+        </div>
       )}
 
       {/* Self-link warning toast */}
@@ -715,8 +777,16 @@ export default function BoardPage() {
                   col.key === 'completed' && styles.completedColumn,
                   isDragTarget && styles.columnDragTarget,
                 ].filter(Boolean).join(' ')}
-                style={{ ...css, ...(linkingState ? { filter: 'brightness(0.3)' } : {}) }}
+                style={{ ...css, ...(linkingState ? { position: 'relative' } : {}) }}
               >
+                {linkingState && (
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'rgba(0,0,0,0.75)',
+                    zIndex: 1, pointerEvents: 'none',
+                    borderRadius: 'inherit',
+                  }} />
+                )}
                 <div className={styles.columnHeader} style={css}>
                   <span className={styles.columnLabel}>{col.label}</span>
                   <span className={styles.columnCount}>{colTasks.length}</span>
@@ -733,6 +803,10 @@ export default function BoardPage() {
                               tCtx.filter((c) => c.relationType === 'question' && c.linkType === 'blocking' && !c.answer).length +
                               taskLinks.filter((l) => l.fromTaskId === t.id && l.type === 'blocked_by').length
                             const waitingCount = tCtx.filter((c) => c.relationType === 'question' && c.linkType === 'waiting_on' && !c.answer).length
+                            const isParent =
+                              taskLinks.some((l) => l.fromTaskId === t.id && l.type === 'parent_of') ||
+                              taskLinks.some((l) => l.toTaskId === t.id && l.type === 'subtask')
+                            const isWaitingOnTask = taskLinks.some((l) => l.fromTaskId === t.id && l.type === 'waiting_on')
                             const isSelectableCard = linkingState != null && t.id !== linkingState.fromTaskId
                             return (
                               <SortableTaskCard
@@ -748,6 +822,8 @@ export default function BoardPage() {
                                 assigneeName={t.assignee?.name}
                                 blockedCount={blockedCount}
                                 waitingCount={waitingCount}
+                                isParent={isParent}
+                                isWaitingOnTask={isWaitingOnTask}
                                 onOpen={() => {
                                   if (linkingState?.fromTaskId === t.id) {
                                     setSelfLinkWarning(true)
@@ -771,8 +847,16 @@ export default function BoardPage() {
           {/* Context column */}
           <section
             className={`${styles.column} ${styles.contextColumn}`}
-            style={{ '--col-accent': 'var(--color-col-context)', ...(linkingState ? { filter: 'brightness(0.3)' } : {}) } as React.CSSProperties}
+            style={{ '--col-accent': 'var(--color-col-context)', ...(linkingState ? { position: 'relative' } : {}) } as React.CSSProperties}
           >
+            {linkingState && (
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'rgba(0,0,0,0.75)',
+                zIndex: 1, pointerEvents: 'none',
+                borderRadius: 'inherit',
+              }} />
+            )}
             <div
               className={styles.columnHeader}
               style={{ '--col-accent': 'var(--color-col-context)' } as React.CSSProperties}
@@ -861,6 +945,7 @@ export default function BoardPage() {
           onDelete={handleTaskDelete}
           onAddContext={(q, rt) => handleAddContext(openTask.id, q, rt)}
           onOpenContext={setOpenContextId}
+          onDeleteLink={handleDeleteLink}
           onEnterLinkMode={handleEnterLinkMode}
         />
       )}

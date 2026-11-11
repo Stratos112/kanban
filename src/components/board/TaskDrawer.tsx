@@ -128,6 +128,8 @@ function LabelPicker({ available, selectedIds, onToggle }: LabelPickerProps) {
 /* ── Drawer ──────────────────────────────────────────── */
 interface ResolvedTaskLink {
   id: string
+  fromTaskId: string
+  toTaskId: string
   type: string
   toTaskRefKey: number
   toTaskTitle: string
@@ -145,12 +147,13 @@ interface Props {
   onDelete: (id: string) => void
   onAddContext: (question: string, relationType: string) => void
   onOpenContext: (id: string) => void
+  onDeleteLink: (fromTaskId: string, toTaskId: string) => void
   onEnterLinkMode: (fromTaskId: string, fromRefKey: number, fromTitle: string, linkType: string, linkLabel: string) => void
 }
 
 export default function TaskDrawer({
   task, boardId, users, currentUserId, contextCards, taskLinks,
-  onClose, onUpdate, onDelete, onAddContext, onOpenContext, onEnterLinkMode,
+  onClose, onUpdate, onDelete, onAddContext, onOpenContext, onDeleteLink, onEnterLinkMode,
 }: Props) {
   const [title, setTitle]             = useState(task.title)
   const [status, setStatus]           = useState(task.status)
@@ -163,6 +166,7 @@ export default function TaskDrawer({
   const [newRelType, setNewRelType]        = useState('details')
   const [assigneeId, setAssigneeId]        = useState(task.assignee?.id ?? '')
   const [confirmDelete, setConfirmDelete]  = useState(false)
+  const [confirmDeleteLinkId, setConfirmDeleteLinkId] = useState<string | null>(null)
   const [selectedLinkType, setSelectedLinkType] = useState<string>('')
   const [expandedCtxId, setExpandedCtxId] = useState<string | null>(null)
   const titleRef = useRef<HTMLTextAreaElement>(null)
@@ -176,6 +180,7 @@ export default function TaskDrawer({
     setAddingContext(false)
     setSelectedLinkType('')
     setExpandedCtxId(null)
+    setConfirmDeleteLinkId(null)
   }, [task.id])
 
   useEffect(() => {
@@ -470,6 +475,28 @@ export default function TaskDrawer({
                         KAN-{link.toTaskRefKey}
                         {link.toTaskTitle && <span className={styles.linkedTitle}> — {link.toTaskTitle}</span>}
                       </span>
+                      {confirmDeleteLinkId === link.id ? (
+                        <span className={styles.linkedDeleteConfirm}>
+                          <span className={styles.linkedDeleteAsk}>Remove?</span>
+                          <button
+                            type="button"
+                            className={styles.linkedDeleteYes}
+                            onClick={() => { onDeleteLink(link.fromTaskId, link.toTaskId); setConfirmDeleteLinkId(null) }}
+                          >Yes</button>
+                          <button
+                            type="button"
+                            className={styles.linkedDeleteNo}
+                            onClick={() => setConfirmDeleteLinkId(null)}
+                          >No</button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.linkedDeleteBtn}
+                          onClick={() => setConfirmDeleteLinkId(link.id)}
+                          aria-label="Remove relationship"
+                        >×</button>
+                      )}
                     </div>
                   ))}
                   {openQuestions.map((card) => (

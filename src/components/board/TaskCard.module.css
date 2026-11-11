@@ -287,3 +287,53 @@
   justify-content: center;
   flex-shrink: 0;
 }
+
+/* ── Waiting on task — snooze indicator ───────────────── */
+.hasZzz::before {
+  content: 'Z\A z\A  z';
+  white-space: pre;
+  position: absolute;
+  left: 5px;
+  top: 11px;
+  font-family: var(--font-sans);
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.9;
+  color: rgba(100, 116, 139, 0.65);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Parent / stack indicator ─────────────────────────── */
+.stackWrapper {
+  position: relative;
+}
+
+.stackLayer1,
+.stackLayer2 {
+  position: absolute;
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+
+/* Second layer — closest behind the card */
+.stackLayer1 {
+  top: 4px;
+  bottom: 0;
+  left: -6px;
+  right: 0;
+  background: color-mix(in srgb, var(--color-surface-raised) 78%, #000 22%);
+  box-shadow: var(--shadow-card);
+  border-left: 3px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+/* Third layer — furthest back */
+.stackLayer2 {
+  top: 8px;
+  bottom: 0;
+  left: -11px;
+  right: 0;
+  background: color-mix(in srgb, var(--color-surface-raised) 60%, #000 40%);
+  box-shadow: var(--shadow-card);
+  border-left: 3px solid color-mix(in srgb, var(--color-border) 45%, transparent);
+}
