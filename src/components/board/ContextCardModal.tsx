@@ -93,6 +93,9 @@ export default function ContextCardModal({ card, parentTask, onClose, onUpdate }
 
   async function handleDone() {
     await Promise.all([saveText(), saveAnswer()])
+    // Always push current answer to parent so the card redraws regardless of
+    // whether saveAnswer's early-return guard fired.
+    onUpdate(card.id, { answer: answer.trim() || undefined })
     onClose()
   }
 

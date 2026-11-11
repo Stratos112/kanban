@@ -124,6 +124,8 @@ export default function BoardPage() {
     linkType: string
     linkLabel: string
   } | null>(null)
+  const [linkSuccess, setLinkSuccess]       = useState<string | null>(null)
+  const [selfLinkWarning, setSelfLinkWarning] = useState(false)
   const tasksSnapshot = useRef<BoardTask[]>([])
 
   const sensors = useSensors(
@@ -437,23 +439,38 @@ export default function BoardPage() {
 
   async function handleSelectLinkTarget(targetTask: BoardTask) {
     if (!linkingState || !boardId) return
-    const { fromTaskId, linkType } = linkingState
+    const { fromTaskId, fromRefKey, linkType, linkLabel } = linkingState
     const inverseType = INVERSE_LINK[linkType] ?? linkType
-    await Promise.all([
+
+    const [{ data: fwdRow, error: e1 }, { data: invRow, error: e2 }] = await Promise.all([
       supabase.from('task_relationships').insert({
         from_task_id: fromTaskId,
         to_task_id:   targetTask.id,
         type:         linkType,
         board_id:     boardId,
-      }),
+      }).select().single(),
       supabase.from('task_relationships').insert({
         from_task_id: targetTask.id,
         to_task_id:   fromTaskId,
         type:         inverseType,
         board_id:     boardId,
-      }),
+      }).select().single(),
     ])
+
+    if (e1) console.error('Forward link insert error:', e1)
+    if (e2) console.error('Inverse link insert error:', e2)
+
+    // Update state immediately without waiting for a full loadTasks round-trip
+    const newLinks: TaskLink[] = []
+    if (fwdRow) newLinks.push({ id: fwdRow.id, fromTaskId,         toTaskId: targetTask.id, type: linkType,     linkedTaskId: targetTask.id })
+    if (invRow) newLinks.push({ id: invRow.id, fromTaskId: targetTask.id, toTaskId: fromTaskId, type: inverseType, linkedTaskId: fromTaskId     })
+    if (newLinks.length > 0) setTaskLinks((prev) => [...prev, ...newLinks])
+
     setLinkingState(null)
+    setLinkSuccess(`KAN-${fromRefKey} "${linkLabel}" ↔ KAN-${targetTask.refKey}`)
+    setTimeout(() => setLinkSuccess(null), 2200)
+
+    // Reload from DB to guarantee both directions are reflected in state
     loadTasks(boardId)
   }
 
@@ -589,43 +606,71 @@ export default function BoardPage() {
         </div>
       </header>
 
-      {/* Linking mode overlay */}
+      {/* Linking mode — dark backdrop (columns inside the board handle their own dimming) */}
       {linkingState && (
-        <>
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 50,
-              background: 'rgba(0,0,0,0.65)',
-              pointerEvents: 'auto',
-            }}
-            onClick={() => setLinkingState(null)}
-          />
-          <div
-            style={{
-              position: 'fixed',
-              top: 16,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 60,
-              background: 'var(--color-surface-raised)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: '10px 20px',
-              fontFamily: 'var(--font-sans)',
-              fontSize: '13px',
-              color: 'var(--color-text)',
-              whiteSpace: 'nowrap',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
-              pointerEvents: 'none',
-            }}
-          >
-            Linking KAN-{linkingState.fromRefKey} as <strong>{linkingState.linkLabel}</strong> — click a task to connect
-            {' '}
-            <span style={{ color: 'var(--color-text-subtle)' }}>[Escape to cancel]</span>
-          </div>
-        </>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 50,
+            background: 'rgba(0,0,0,0.72)',
+            pointerEvents: 'auto',
+          }}
+          onClick={() => setLinkingState(null)}
+        />
+      )}
+
+      {/* Self-link warning toast */}
+      {selfLinkWarning && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 70,
+            background: '#d97706',
+            color: '#fff',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '13px',
+            fontWeight: 600,
+            padding: '10px 20px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          A task can't be linked to itself
+        </div>
+      )}
+
+      {/* Link success banner */}
+      {linkSuccess && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 65,
+            background: '#16a34a',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '52px',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '14px',
+            fontWeight: 600,
+            boxShadow: '0 -2px 24px rgba(22,163,74,0.5)',
+            gap: '10px',
+            pointerEvents: 'none',
+          }}
+        >
+          <span style={{ fontSize: '18px' }}>✓</span>
+          <span>Linked — {linkSuccess}</span>
+        </div>
       )}
 
       <DndContext
@@ -652,7 +697,7 @@ export default function BoardPage() {
                   col.key === 'completed' && styles.completedColumn,
                   isDragTarget && styles.columnDragTarget,
                 ].filter(Boolean).join(' ')}
-                style={css}
+                style={{ ...css, ...(linkingState ? { filter: 'brightness(0.3)' } : {}) }}
               >
                 <div className={styles.columnHeader} style={css}>
                   <span className={styles.columnLabel}>{col.label}</span>
@@ -683,7 +728,14 @@ export default function BoardPage() {
                                 assigneeName={t.assignee?.name}
                                 blockedCount={blockedCount}
                                 waitingCount={waitingCount}
-                                onOpen={() => setOpenTaskId(t.id)}
+                                onOpen={() => {
+                                  if (linkingState?.fromTaskId === t.id) {
+                                    setSelfLinkWarning(true)
+                                    setTimeout(() => setSelfLinkWarning(false), 2000)
+                                  } else {
+                                    setOpenTaskId(t.id)
+                                  }
+                                }}
                                 isSelectable={isSelectableCard}
                                 onSelect={() => handleSelectLinkTarget(t)}
                               />
@@ -699,7 +751,7 @@ export default function BoardPage() {
           {/* Context column */}
           <section
             className={`${styles.column} ${styles.contextColumn}`}
-            style={{ '--col-accent': 'var(--color-col-context)' } as React.CSSProperties}
+            style={{ '--col-accent': 'var(--color-col-context)', ...(linkingState ? { filter: 'brightness(0.3)' } : {}) } as React.CSSProperties}
           >
             <div
               className={styles.columnHeader}

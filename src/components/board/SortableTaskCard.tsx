@@ -35,6 +35,8 @@ export default function SortableTaskCard({ id, onOpen, isSelectable, onSelect, .
         transition,
         opacity: isDragging ? 0.25 : 1,
         cursor: isDragging ? 'grabbing' : isSelectable ? 'crosshair' : 'grab',
+        // Compensate for the column-level brightness(0.3) dim applied in linking mode
+        ...(isSelectable ? { filter: 'brightness(3.33)' } : {}),
       }}
       onClick={handleClick}
       {...attributes}

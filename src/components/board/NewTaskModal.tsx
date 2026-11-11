@@ -283,8 +283,8 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
   function handleAddPanel() {
     setPanels((prev) => {
       const next = [...prev, makePanel(labels)]
-      // If adding a 4th, drop the oldest (index 0)
-      if (next.length > 3) return next.slice(1)
+      // If adding a 3rd, drop the oldest (index 0)
+      if (next.length > 2) return next.slice(1)
       return next
     })
   }
