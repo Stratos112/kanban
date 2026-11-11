@@ -15,6 +15,7 @@ import {
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import TaskCard from '../components/board/TaskCard'
 import SortableTaskCard from '../components/board/SortableTaskCard'
+import TaskDrawer from '../components/board/TaskDrawer'
 import NewTaskModal, { type NewTaskPayload } from '../components/board/NewTaskModal'
 import { useAuth } from '../lib/AuthContext'
 import { getBoardBySlug } from '../lib/boards'
@@ -30,7 +31,7 @@ const COLUMNS: { key: TaskStatus; label: string; accent: string }[] = [
   { key: 'completed',   label: 'Completed',   accent: 'var(--color-col-completed)' },
 ]
 
-interface BoardTask {
+export interface BoardTask {
   id: string
   refKey: number
   type: 'task'
@@ -73,6 +74,7 @@ export default function BoardPage() {
   const [modalOpen, setModalOpen]   = useState(false)
   const [loadingTasks, setLoadingTasks] = useState(true)
   const [activeId, setActiveId]     = useState<string | null>(null)
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null)
   const tasksSnapshot               = useRef<BoardTask[]>([])
 
   const sensors = useSensors(
@@ -184,6 +186,10 @@ export default function BoardPage() {
       labels:   payload.labels,
     }])
     setModalOpen(false)
+  }
+
+  function handleTaskUpdate(id: string, changes: Partial<BoardTask>) {
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...changes } : t))
   }
 
   /* ── Drag handlers ─────────────────────────────────── */
@@ -298,6 +304,7 @@ export default function BoardPage() {
   /* ── Render ────────────────────────────────────────── */
   const tasksInColumn = (status: TaskStatus) => tasks.filter((t) => t.status === status)
   const activeTask = activeId ? tasks.find((t) => t.id === activeId) ?? null : null
+  const openTask = openTaskId ? tasks.find((t) => t.id === openTaskId) ?? null : null
   const isLoading = authLoading || loadingTasks
 
   return (
@@ -363,6 +370,7 @@ export default function BoardPage() {
                               priority={t.priority}
                               dueDate={t.dueDate}
                               labels={t.labels}
+                              onOpen={() => setOpenTaskId(t.id)}
                             />
                           ))
                     }
@@ -409,6 +417,15 @@ export default function BoardPage() {
         <NewTaskModal
           onClose={() => setModalOpen(false)}
           onSubmit={handleCreate}
+        />
+      )}
+
+      {openTask && boardId && (
+        <TaskDrawer
+          task={openTask}
+          boardId={boardId}
+          onClose={() => setOpenTaskId(null)}
+          onUpdate={(changes) => handleTaskUpdate(openTask.id, changes)}
         />
       )}
     </div>
