@@ -548,6 +548,35 @@
   color: var(--color-text-muted);
 }
 
+.linkedItemQuestion {
+  cursor: pointer;
+  border-color: color-mix(in srgb, #e879f9 22%, var(--color-border));
+  background: color-mix(in srgb, #e879f9 5%, var(--color-surface-raised));
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.linkedItemQuestion:hover {
+  border-color: color-mix(in srgb, #e879f9 42%, var(--color-border));
+  background: color-mix(in srgb, #e879f9 10%, var(--color-surface-raised));
+}
+
+.linkedTypeQuestion {
+  color: #e879f9;
+  background: color-mix(in srgb, #e879f9 12%, transparent);
+  border-color: color-mix(in srgb, #e879f9 28%, transparent);
+}
+
+.linkedQuestionText {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
 /* ── Connect section ─────────────────────────────────── */
 .connectSection {
   display: flex;

@@ -729,7 +729,9 @@ export default function BoardPage() {
                         ? <div className={styles.empty}>No tasks</div>
                         : colTasks.map((t) => {
                             const tCtx = contextCards.filter((c) => c.parentTaskId === t.id)
-                            const blockedCount = tCtx.filter((c) => c.relationType === 'question' && c.linkType === 'blocking'   && !c.answer).length
+                            const blockedCount =
+                              tCtx.filter((c) => c.relationType === 'question' && c.linkType === 'blocking' && !c.answer).length +
+                              taskLinks.filter((l) => l.fromTaskId === t.id && l.type === 'blocked_by').length
                             const waitingCount = tCtx.filter((c) => c.relationType === 'question' && c.linkType === 'waiting_on' && !c.answer).length
                             const isSelectableCard = linkingState != null && t.id !== linkingState.fromTaskId
                             return (

@@ -34,6 +34,12 @@ const LINK_OPTIONS = [
   { value: 'completes',  label: 'Completes' },
 ]
 
+const CONTEXT_LINK_LABELS: Record<string, string> = {
+  blocking:   'Blocked by',
+  waiting_on: 'Waiting on',
+  more_info:  'Needs info',
+}
+
 function getLinkLabel(value: string) {
   return LINK_OPTIONS.find((o) => o.value === value)?.label ?? value
 }
@@ -443,26 +449,49 @@ export default function TaskDrawer({
             )}
           </div>
 
-          {/* Linked Tasks */}
+          {/* Relationships */}
           <div className={styles.linkedSection}>
             <div className={styles.linkedSectionHeader}>
-              <span className={styles.sectionTitle}>Linked Tasks</span>
+              <span className={styles.sectionTitle}>Relationships</span>
             </div>
-            {taskLinks.length === 0 ? (
-              <p className={styles.linkedEmpty}>No linked tasks.</p>
-            ) : (
-              <div className={styles.linkedList}>
-                {taskLinks.map((link) => (
-                  <div key={link.id} className={styles.linkedItem}>
-                    <span className={styles.linkedType}>{getLinkLabel(link.type)}</span>
-                    <span className={styles.linkedTarget}>
-                      KAN-{link.toTaskRefKey}
-                      {link.toTaskTitle && <span className={styles.linkedTitle}> — {link.toTaskTitle}</span>}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+            {(() => {
+              const openQuestions = contextCards.filter(
+                (c) => c.relationType === 'question' && !c.answer,
+              )
+              const empty = taskLinks.length === 0 && openQuestions.length === 0
+              return empty ? (
+                <p className={styles.linkedEmpty}>No relationships.</p>
+              ) : (
+                <div className={styles.linkedList}>
+                  {taskLinks.map((link) => (
+                    <div key={link.id} className={styles.linkedItem}>
+                      <span className={styles.linkedType}>{link.type}</span>
+                      <span className={styles.linkedTarget}>
+                        KAN-{link.toTaskRefKey}
+                        {link.toTaskTitle && <span className={styles.linkedTitle}> — {link.toTaskTitle}</span>}
+                      </span>
+                    </div>
+                  ))}
+                  {openQuestions.map((card) => (
+                    <div
+                      key={card.id}
+                      className={`${styles.linkedItem} ${styles.linkedItemQuestion}`}
+                      onClick={() => onOpenContext(card.id)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpenContext(card.id) }}
+                    >
+                      <span className={`${styles.linkedType} ${styles.linkedTypeQuestion}`}>
+                        {CONTEXT_LINK_LABELS[card.linkType] ?? card.linkType}
+                      </span>
+                      <span className={styles.linkedQuestionText}>
+                        {card.question || card.title || '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
 
           {/* Connect section */}
