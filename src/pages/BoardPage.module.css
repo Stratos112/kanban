@@ -6,7 +6,7 @@
   background: var(--color-bg);
 }
 
-/* Header */
+/* ── Header ─────────────────────────────────────────── */
 .header {
   display: flex;
   align-items: center;
@@ -45,12 +45,6 @@
   color: var(--color-text-muted);
 }
 
-.filterBar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .search {
   width: 220px;
   height: 32px;
@@ -72,9 +66,9 @@
   padding: 0 14px;
   border-radius: var(--radius-md);
   background: var(--color-accent);
-  color: #fff;
+  color: #000;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   border: none;
   transition: background 0.15s, transform 0.1s;
   white-space: nowrap;
@@ -85,67 +79,81 @@
   transform: translateY(-1px);
 }
 
-/* Board */
+/* ── Board container ─────────────────────────────────── */
 .board {
   display: flex;
   flex: 1;
   overflow-x: auto;
   overflow-y: hidden;
-  gap: 0;
-  background: var(--color-bg);
 }
 
+/* ── Column ──────────────────────────────────────────── */
 .column {
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-width: 240px;
-  max-width: 300px;
-  border-right: 1px solid var(--color-border-subtle);
-  background: var(--color-bg);
+  min-width: 250px;
+  max-width: 310px;
+  /* Right border acts as column divider */
+  border-right: 2px solid var(--color-border);
+  /* Subtle column-tinted background via CSS var injected per-column */
+  background: color-mix(in srgb, var(--color-bg) 96%, var(--col-accent, transparent) 4%);
   overflow: hidden;
+  transition: background 0.2s;
 }
 
-.contextColumn {
-  min-width: 260px;
-  max-width: 320px;
-  background: color-mix(in srgb, var(--color-bg) 97%, #e879f9 3%);
-  border-left: 1px solid var(--color-border);
+.column:last-child {
   border-right: none;
 }
 
+/* Context column is visually separated */
+.contextColumn {
+  min-width: 270px;
+  max-width: 330px;
+  border-left: 2px solid var(--color-border);
+  border-right: none;
+}
+
+/* ── Column header ───────────────────────────────────── */
 .columnHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 14px 10px;
+  padding: 0 14px;
+  height: 48px;
   flex-shrink: 0;
-  border-top: 2px solid var(--col-accent, var(--color-border));
+  /* Bold top accent bar */
+  border-top: 4px solid var(--col-accent, var(--color-border));
+  background: color-mix(in srgb, var(--color-surface) 85%, var(--col-accent, transparent) 15%);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .columnLabel {
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  /* Label inherits the column's accent color */
+  color: color-mix(in srgb, var(--color-text-muted) 60%, var(--col-accent, var(--color-text-muted)) 40%);
 }
 
 .columnCount {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text-subtle);
-  background: var(--color-surface-raised);
-  padding: 1px 7px;
+  font-weight: 700;
+  color: var(--col-accent, var(--color-text-subtle));
+  background: color-mix(in srgb, var(--col-accent, var(--color-surface-raised)) 15%, var(--color-surface-raised) 85%);
+  padding: 2px 8px;
   border-radius: 999px;
-  min-width: 20px;
+  min-width: 22px;
   text-align: center;
+  border: 1px solid color-mix(in srgb, var(--col-accent, var(--color-border)) 30%, transparent);
 }
 
+/* ── Column body ─────────────────────────────────────── */
 .columnBody {
   flex: 1;
   overflow-y: auto;
-  padding: 6px 10px 12px;
+  padding: 10px 10px 16px;
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -155,5 +163,6 @@
   color: var(--color-text-subtle);
   font-size: 12px;
   text-align: center;
-  padding: 20px 0;
+  padding: 24px 0;
+  opacity: 0.6;
 }
