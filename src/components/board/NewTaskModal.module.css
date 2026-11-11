@@ -11,6 +11,7 @@
 
 .modal {
   width: 500px;
+  max-height: 88vh;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
@@ -18,6 +19,8 @@
     0 8px 32px rgba(0, 0, 0, 0.6),
     0 32px 64px rgba(0, 0, 0, 0.4),
     0 0 0 1px rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Modal header ───────────────────────────────── */
@@ -78,8 +81,17 @@
 .form {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.formBody {
+  display: flex;
+  flex-direction: column;
   gap: 18px;
-  padding: 20px 20px 22px;
+  padding: 20px 20px 0;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .row {
@@ -272,12 +284,105 @@
   border-color: rgba(99, 130, 180, 0.5);
 }
 
+/* ── Context section ────────────────────────────── */
+.contextSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+.contextHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.addContextBtn {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.1s;
+}
+.addContextBtn:hover { opacity: 1; }
+
+.contextItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.contextTypeSelect {
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  appearance: none;
+  padding-right: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23768390' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 10px;
+}
+
+.contextInput {
+  flex: 1;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.contextInput::placeholder { color: var(--color-text-subtle); }
+.contextInput:focus { border-color: var(--color-col-in-progress); }
+
+.removeContextBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--color-text-subtle);
+  font-size: 11px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.1s, background 0.1s;
+}
+.removeContextBtn:hover {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+}
+
 /* ── Actions ────────────────────────────────────── */
 .actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding-top: 100px;
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .cancelBtn {

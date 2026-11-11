@@ -188,6 +188,173 @@
   cursor: pointer;
 }
 
+/* ── Context section ─────────────────────────────────── */
+.contextSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contextSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.contextSectionTitle {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.addContextBtn {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.1s;
+}
+.addContextBtn:hover { opacity: 1; }
+
+.contextEmpty {
+  font-size: 12px;
+  color: var(--color-text-subtle);
+  margin: 0;
+  opacity: 0.6;
+}
+
+/* Individual context card */
+.contextCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-surface-raised) 60%, transparent);
+}
+
+.contextCardTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.contextTypeSelect {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-col-context);
+  background: color-mix(in srgb, var(--color-col-context) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 30%, transparent);
+  border-radius: 999px;
+  padding: 2px 8px 2px 8px;
+  outline: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  appearance: none;
+}
+
+.contextQuestion {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1.45;
+  flex: 1;
+  padding-top: 1px;
+}
+
+.contextAnswer {
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  resize: none;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+.contextAnswer::placeholder { color: var(--color-text-subtle); opacity: 0.6; }
+.contextAnswer:focus { color: var(--color-text); }
+
+/* Add context form */
+.addContextForm {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-surface-raised) 60%, transparent);
+}
+
+.addContextRow {
+  padding: 10px 12px 0;
+}
+
+.contextQuestionInput {
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text);
+  resize: none;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+.contextQuestionInput::placeholder { color: var(--color-text-subtle); }
+
+.addContextActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 10px 10px;
+}
+
+.cancelContextBtn {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.1s, background 0.1s;
+}
+.cancelContextBtn:hover { color: var(--color-text); background: var(--color-surface-raised); }
+
+.submitContextBtn {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  border: none;
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.1s;
+}
+.submitContextBtn:hover:not(:disabled) { filter: brightness(1.1); }
+.submitContextBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* ── Label picker ────────────────────────────────────── */
 .labelPicker {
   position: relative;

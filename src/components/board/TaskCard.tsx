@@ -12,6 +12,7 @@ export interface TaskCardProps {
   labels?: { name: string; color?: string }[]
   assigneeColor?: string | null
   assigneeName?: string | null
+  parentRefKey?: number
 }
 
 export default function TaskCard({
@@ -25,6 +26,7 @@ export default function TaskCard({
   labels = [],
   assigneeColor,
   assigneeName,
+  parentRefKey,
 }: TaskCardProps) {
   const isContext = type === 'context'
 
@@ -35,6 +37,9 @@ export default function TaskCard({
       <div className={styles.header}>
         <span className={styles.refKey}>
           {isContext ? '?' : ''}KAN-{refKey}
+          {isContext && parentRefKey != null && (
+            <span className={styles.parentLink}> → KAN-{parentRefKey}</span>
+          )}
         </span>
         {!isContext && priority && (
           <span className={styles.priorityWell}>

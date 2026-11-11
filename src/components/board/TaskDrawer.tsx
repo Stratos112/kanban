@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { BoardTask } from '../../pages/BoardPage'
+import type { BoardTask, ContextCard } from '../../pages/BoardPage'
 import type { TaskPriority, TaskStatus } from '../../lib/database.types'
 import { supabase } from '../../lib/supabase'
 import styles from './TaskDrawer.module.css'
@@ -16,6 +16,14 @@ const PRIORITIES: { value: TaskPriority; label: string }[] = [
   { value: 'low',    label: 'Low' },
   { value: 'normal', label: 'Normal' },
   { value: 'high',   label: 'High' },
+]
+
+const RELATION_TYPES = [
+  { value: 'question',   label: 'Question' },
+  { value: 'assumption', label: 'Assumption' },
+  { value: 'decision',   label: 'Decision' },
+  { value: 'risk',       label: 'Risk' },
+  { value: 'note',       label: 'Note' },
 ]
 
 interface AvailableLabel { id: string; name: string; color: string }
@@ -103,28 +111,36 @@ function LabelPicker({ available, selectedIds, onToggle }: LabelPickerProps) {
 interface Props {
   task: BoardTask
   boardId: string
+  contextCards: ContextCard[]
   onClose: () => void
   onUpdate: (changes: Partial<BoardTask>) => void
+  onAddContext: (question: string, relationType: string) => void
+  onUpdateContext: (id: string, changes: Partial<ContextCard>) => void
 }
 
-export default function TaskDrawer({ task, boardId, onClose, onUpdate }: Props) {
-  const [title, setTitle]           = useState(task.title)
-  const [status, setStatus]         = useState(task.status)
-  const [priority, setPriority]     = useState(task.priority)
-  const [dueDate, setDueDate]       = useState(task.dueDate ?? '')
-  const [available, setAvailable]   = useState<AvailableLabel[]>([])
+export default function TaskDrawer({
+  task, boardId, contextCards,
+  onClose, onUpdate, onAddContext, onUpdateContext,
+}: Props) {
+  const [title, setTitle]             = useState(task.title)
+  const [status, setStatus]           = useState(task.status)
+  const [priority, setPriority]       = useState(task.priority)
+  const [dueDate, setDueDate]         = useState(task.dueDate ?? '')
+  const [available, setAvailable]     = useState<AvailableLabel[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [addingContext, setAddingContext] = useState(false)
+  const [newQuestion, setNewQuestion]    = useState('')
+  const [newRelType, setNewRelType]      = useState('question')
   const titleRef = useRef<HTMLTextAreaElement>(null)
 
-  // Sync field state if a different task is opened
   useEffect(() => {
     setTitle(task.title)
     setStatus(task.status)
     setPriority(task.priority)
     setDueDate(task.dueDate ?? '')
+    setAddingContext(false)
   }, [task.id])
 
-  // Load available board labels + current task label IDs
   useEffect(() => {
     async function load() {
       const [{ data: allLabels }, { data: taskLabels }] = await Promise.all([
@@ -143,7 +159,6 @@ export default function TaskDrawer({ task, boardId, onClose, onUpdate }: Props) 
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  // Auto-resize title textarea
   useEffect(() => {
     const el = titleRef.current
     if (!el) return
@@ -178,23 +193,36 @@ export default function TaskDrawer({ task, boardId, onClose, onUpdate }: Props) 
 
   async function toggleLabel(labelId: string) {
     const isSelected = selectedIds.includes(labelId)
-
     if (isSelected) {
       await supabase.from('task_labels').delete().eq('task_id', task.id).eq('label_id', labelId)
     } else {
       await supabase.from('task_labels').insert({ task_id: task.id, label_id: labelId })
     }
-
-    const newIds = isSelected
-      ? selectedIds.filter((id) => id !== labelId)
-      : [...selectedIds, labelId]
-
+    const newIds = isSelected ? selectedIds.filter((id) => id !== labelId) : [...selectedIds, labelId]
     setSelectedIds(newIds)
     onUpdate({
       labels: available
         .filter((l) => newIds.includes(l.id))
         .map((l) => ({ name: l.name, color: l.color })),
     })
+  }
+
+  async function saveContextRelType(card: ContextCard, val: string) {
+    await supabase.from('tasks').update({ context_relation_type: val }).eq('id', card.id)
+    onUpdateContext(card.id, { relationType: val })
+  }
+
+  async function saveContextAnswer(card: ContextCard, val: string) {
+    await supabase.from('tasks').update({ answer: val || null }).eq('id', card.id)
+    onUpdateContext(card.id, { answer: val || undefined })
+  }
+
+  function submitContext() {
+    if (!newQuestion.trim()) return
+    onAddContext(newQuestion.trim(), newRelType)
+    setNewQuestion('')
+    setNewRelType('question')
+    setAddingContext(false)
   }
 
   return (
@@ -208,6 +236,7 @@ export default function TaskDrawer({ task, boardId, onClose, onUpdate }: Props) 
         </div>
 
         <div className={styles.body}>
+          {/* Title */}
           <textarea
             ref={titleRef}
             className={styles.title}
@@ -218,6 +247,7 @@ export default function TaskDrawer({ task, boardId, onClose, onUpdate }: Props) 
             rows={1}
           />
 
+          {/* Metadata */}
           <div className={styles.meta}>
             <div className={styles.metaRow}>
               <span className={styles.metaLabel}>Status</span>
@@ -264,8 +294,109 @@ export default function TaskDrawer({ task, boardId, onClose, onUpdate }: Props) 
               />
             </div>
           </div>
+
+          {/* Context */}
+          <div className={styles.contextSection}>
+            <div className={styles.contextSectionHeader}>
+              <span className={styles.contextSectionTitle}>Context</span>
+              {!addingContext && (
+                <button
+                  type="button"
+                  className={styles.addContextBtn}
+                  onClick={() => setAddingContext(true)}
+                >
+                  + Add
+                </button>
+              )}
+            </div>
+
+            {contextCards.map((card) => (
+              <ContextCardRow
+                key={card.id}
+                card={card}
+                onRelTypeChange={(v) => saveContextRelType(card, v)}
+                onAnswerChange={(v) => saveContextAnswer(card, v)}
+              />
+            ))}
+
+            {addingContext && (
+              <div className={styles.addContextForm}>
+                <div className={styles.addContextRow}>
+                  <select
+                    className={styles.contextTypeSelect}
+                    value={newRelType}
+                    onChange={(e) => setNewRelType(e.target.value)}
+                  >
+                    {RELATION_TYPES.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <textarea
+                  className={styles.contextQuestionInput}
+                  placeholder="What needs to be noted or clarified?"
+                  value={newQuestion}
+                  onChange={(e) => setNewQuestion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitContext() }
+                    if (e.key === 'Escape') setAddingContext(false)
+                  }}
+                  autoFocus
+                  rows={2}
+                />
+                <div className={styles.addContextActions}>
+                  <button type="button" className={styles.cancelContextBtn} onClick={() => setAddingContext(false)}>Cancel</button>
+                  <button type="button" className={styles.submitContextBtn} onClick={submitContext} disabled={!newQuestion.trim()}>Add</button>
+                </div>
+              </div>
+            )}
+
+            {contextCards.length === 0 && !addingContext && (
+              <p className={styles.contextEmpty}>No context yet.</p>
+            )}
+          </div>
         </div>
       </aside>
     </>
+  )
+}
+
+/* ── Context card row ────────────────────────────────── */
+function ContextCardRow({
+  card,
+  onRelTypeChange,
+  onAnswerChange,
+}: {
+  card: ContextCard
+  onRelTypeChange: (v: string) => void
+  onAnswerChange: (v: string) => void
+}) {
+  const [answer, setAnswer] = useState(card.answer ?? '')
+
+  useEffect(() => { setAnswer(card.answer ?? '') }, [card.id])
+
+  return (
+    <div className={styles.contextCard}>
+      <div className={styles.contextCardTop}>
+        <select
+          className={styles.contextTypeSelect}
+          value={card.relationType}
+          onChange={(e) => onRelTypeChange(e.target.value)}
+        >
+          {RELATION_TYPES.map((r) => (
+            <option key={r.value} value={r.value}>{r.label}</option>
+          ))}
+        </select>
+        <p className={styles.contextQuestion}>{card.question}</p>
+      </div>
+      <textarea
+        className={styles.contextAnswer}
+        placeholder="Add an answer…"
+        value={answer}
+        rows={2}
+        onChange={(e) => setAnswer(e.target.value)}
+        onBlur={() => onAnswerChange(answer)}
+      />
+    </div>
   )
 }

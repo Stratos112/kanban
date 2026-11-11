@@ -42,6 +42,15 @@ export interface BoardTask {
   labels: { name: string; color?: string }[]
 }
 
+export interface ContextCard {
+  id: string
+  refKey: number
+  question: string
+  answer?: string
+  relationType: string
+  parentTaskId: string
+}
+
 /* ── Droppable column body ───────────────────────────── */
 function ColumnBody({
   id,
@@ -68,20 +77,20 @@ export default function BoardPage() {
   const { slug } = useParams<{ slug: string }>()
   const { userId, loading: authLoading } = useAuth()
 
-  const [boardId, setBoardId]       = useState<string | null>(null)
-  const [boardName, setBoardName]   = useState('')
-  const [tasks, setTasks]           = useState<BoardTask[]>([])
-  const [modalOpen, setModalOpen]   = useState(false)
-  const [loadingTasks, setLoadingTasks] = useState(true)
-  const [activeId, setActiveId]     = useState<string | null>(null)
-  const [openTaskId, setOpenTaskId] = useState<string | null>(null)
-  const tasksSnapshot               = useRef<BoardTask[]>([])
+  const [boardId, setBoardId]             = useState<string | null>(null)
+  const [boardName, setBoardName]         = useState('')
+  const [tasks, setTasks]                 = useState<BoardTask[]>([])
+  const [contextCards, setContextCards]   = useState<ContextCard[]>([])
+  const [modalOpen, setModalOpen]         = useState(false)
+  const [loadingTasks, setLoadingTasks]   = useState(true)
+  const [activeId, setActiveId]           = useState<string | null>(null)
+  const [openTaskId, setOpenTaskId]       = useState<string | null>(null)
+  const tasksSnapshot                     = useRef<BoardTask[]>([])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   )
 
-  // Load board then tasks
   useEffect(() => {
     if (!slug || authLoading) return
     getBoardBySlug(slug).then((board) => {
@@ -92,7 +101,6 @@ export default function BoardPage() {
     })
   }, [slug, authLoading])
 
-  // Real-time subscription
   useEffect(() => {
     if (!boardId) return
     const channel = supabase
@@ -112,24 +120,43 @@ export default function BoardPage() {
       .from('tasks')
       .select('*, task_labels(labels(name, color))')
       .eq('board_id', id)
-      .neq('status', 'context')
       .order('position', { ascending: true })
 
     if (error) { console.error(error); setLoadingTasks(false); return }
 
-    setTasks((data ?? []).map((row) => ({
-      id:       row.id,
-      refKey:   row.ref_key,
-      type:     'task',
-      status:   row.status as Exclude<TaskStatus, 'context'>,
-      title:    row.title ?? '',
-      priority: (row.priority ?? 'normal') as TaskPriority,
-      dueDate:  row.due_date ?? undefined,
-      labels:   (row.task_labels as any[])
-                  .map((tl) => tl.labels)
-                  .filter(Boolean)
-                  .map((l: { name: string; color: string }) => ({ name: l.name, color: l.color })),
-    })))
+    const rows = data ?? []
+
+    setTasks(
+      rows
+        .filter((r) => r.status !== 'context')
+        .map((row) => ({
+          id:       row.id,
+          refKey:   row.ref_key,
+          type:     'task' as const,
+          status:   row.status as Exclude<TaskStatus, 'context'>,
+          title:    row.title ?? '',
+          priority: (row.priority ?? 'normal') as TaskPriority,
+          dueDate:  row.due_date ?? undefined,
+          labels:   (row.task_labels as any[])
+                      .map((tl) => tl.labels)
+                      .filter(Boolean)
+                      .map((l: { name: string; color: string }) => ({ name: l.name, color: l.color })),
+        }))
+    )
+
+    setContextCards(
+      rows
+        .filter((r) => r.status === 'context')
+        .map((row) => ({
+          id:           row.id,
+          refKey:       row.ref_key,
+          question:     row.question ?? '',
+          answer:       row.answer ?? undefined,
+          relationType: row.context_relation_type ?? 'question',
+          parentTaskId: row.parent_task_id ?? '',
+        }))
+    )
+
     setLoadingTasks(false)
   }
 
@@ -175,6 +202,35 @@ export default function BoardPage() {
       }
     }
 
+    // Create any context items submitted with the task
+    const newContextCards: ContextCard[] = []
+    for (const item of payload.contextItems) {
+      const { data: ctxRow } = await supabase
+        .from('tasks')
+        .insert({
+          user_id:               userId,
+          board_id:              boardId,
+          type:                  'context',
+          status:                'context',
+          question:              item.question,
+          context_relation_type: item.relationType,
+          parent_task_id:        row.id,
+          position:              contextCards.length + newContextCards.length,
+        })
+        .select()
+        .single()
+
+      if (ctxRow) {
+        newContextCards.push({
+          id:           ctxRow.id,
+          refKey:       ctxRow.ref_key,
+          question:     ctxRow.question ?? '',
+          relationType: item.relationType,
+          parentTaskId: row.id,
+        })
+      }
+    }
+
     setTasks((prev) => [...prev, {
       id:       row.id,
       refKey:   row.ref_key,
@@ -185,11 +241,44 @@ export default function BoardPage() {
       dueDate:  row.due_date ?? undefined,
       labels:   payload.labels,
     }])
+    if (newContextCards.length) setContextCards((prev) => [...prev, ...newContextCards])
     setModalOpen(false)
   }
 
   function handleTaskUpdate(id: string, changes: Partial<BoardTask>) {
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...changes } : t))
+  }
+
+  async function handleAddContext(parentTaskId: string, question: string, relationType: string) {
+    if (!userId || !boardId) return
+    const { data: row } = await supabase
+      .from('tasks')
+      .insert({
+        user_id:               userId,
+        board_id:              boardId,
+        type:                  'context',
+        status:                'context',
+        question,
+        context_relation_type: relationType,
+        parent_task_id:        parentTaskId,
+        position:              contextCards.length,
+      })
+      .select()
+      .single()
+
+    if (row) {
+      setContextCards((prev) => [...prev, {
+        id:           row.id,
+        refKey:       row.ref_key,
+        question:     row.question ?? '',
+        relationType,
+        parentTaskId,
+      }])
+    }
+  }
+
+  function handleContextUpdate(id: string, changes: Partial<ContextCard>) {
+    setContextCards((prev) => prev.map((c) => c.id === id ? { ...c, ...changes } : c))
   }
 
   /* ── Drag handlers ─────────────────────────────────── */
@@ -215,21 +304,16 @@ export default function BoardPage() {
 
     if (!overCol || activeTask.status === overCol) return
 
-    // Move task to new column, inserting before the hovered task or appending
     setTasks((prev) => {
       const without = prev.filter((t) => t.id !== activeTaskId)
       const destTasks = without.filter((t) => t.status === overCol)
-
       const movedTask = { ...activeTask, status: overCol }
 
       if (!overIsColumn) {
         const overIdx = destTasks.findIndex((t) => t.id === overId)
         const inserted = [...destTasks]
         inserted.splice(overIdx >= 0 ? overIdx : destTasks.length, 0, movedTask)
-        return [
-          ...without.filter((t) => t.status !== overCol),
-          ...inserted,
-        ]
+        return [...without.filter((t) => t.status !== overCol), ...inserted]
       }
 
       return [...without, movedTask]
@@ -253,7 +337,6 @@ export default function BoardPage() {
     const overIsColumn = COLUMNS.some((c) => c.key === overId)
     let finalTasks = tasks
 
-    // Within-column reorder
     if (!overIsColumn && activeTaskId !== overId) {
       const overTask = tasks.find((t) => t.id === overId)
       if (overTask && overTask.status === activeTask.status) {
@@ -262,38 +345,26 @@ export default function BoardPage() {
         const newIdx = colTasks.findIndex((t) => t.id === overId)
         if (oldIdx !== -1 && newIdx !== -1 && oldIdx !== newIdx) {
           const reordered = arrayMove(colTasks, oldIdx, newIdx)
-          finalTasks = [
-            ...tasks.filter((t) => t.status !== activeTask.status),
-            ...reordered,
-          ]
+          finalTasks = [...tasks.filter((t) => t.status !== activeTask.status), ...reordered]
           setTasks(finalTasks)
         }
       }
     }
 
-    // Determine what changed vs snapshot
     const originalTask = tasksSnapshot.current.find((t) => t.id === activeTaskId)
     const statusChanged = originalTask?.status !== activeTask.status
-
-    // Commit to DB
     const updates: Promise<unknown>[] = []
 
     if (statusChanged) {
-      updates.push(
-        supabase.from('tasks').update({ status: activeTask.status }).eq('id', activeTaskId),
-      )
+      updates.push(supabase.from('tasks').update({ status: activeTask.status }).eq('id', activeTaskId))
     }
 
-    // Rewrite positions for the destination column
-    const destColTasks = finalTasks.filter((t) => t.status === activeTask.status)
-    destColTasks.forEach((t, i) => {
+    finalTasks.filter((t) => t.status === activeTask.status).forEach((t, i) => {
       updates.push(supabase.from('tasks').update({ position: i }).eq('id', t.id))
     })
 
-    // Rewrite positions for the source column if it changed
     if (statusChanged && originalTask) {
-      const srcColTasks = finalTasks.filter((t) => t.status === originalTask.status)
-      srcColTasks.forEach((t, i) => {
+      finalTasks.filter((t) => t.status === originalTask.status).forEach((t, i) => {
         updates.push(supabase.from('tasks').update({ position: i }).eq('id', t.id))
       })
     }
@@ -303,9 +374,9 @@ export default function BoardPage() {
 
   /* ── Render ────────────────────────────────────────── */
   const tasksInColumn = (status: TaskStatus) => tasks.filter((t) => t.status === status)
-  const activeTask = activeId ? tasks.find((t) => t.id === activeId) ?? null : null
-  const openTask = openTaskId ? tasks.find((t) => t.id === openTaskId) ?? null : null
-  const isLoading = authLoading || loadingTasks
+  const activeTask    = activeId ? tasks.find((t) => t.id === activeId) ?? null : null
+  const openTask      = openTaskId ? tasks.find((t) => t.id === openTaskId) ?? null : null
+  const isLoading     = authLoading || loadingTasks
 
   return (
     <div className={styles.page}>
@@ -380,6 +451,7 @@ export default function BoardPage() {
             )
           })}
 
+          {/* Context column */}
           <section
             className={`${styles.column} ${styles.contextColumn}`}
             style={{ '--col-accent': 'var(--color-col-context)' } as React.CSSProperties}
@@ -389,10 +461,27 @@ export default function BoardPage() {
               style={{ '--col-accent': 'var(--color-col-context)' } as React.CSSProperties}
             >
               <span className={styles.columnLabel}>Context</span>
-              <span className={styles.columnCount}>0</span>
+              <span className={styles.columnCount}>{contextCards.length}</span>
             </div>
             <div className={styles.columnBody}>
-              <div className={styles.empty}>No context cards</div>
+              {isLoading
+                ? <div className={styles.empty}>Loading…</div>
+                : contextCards.length === 0
+                  ? <div className={styles.empty}>No context cards</div>
+                  : contextCards.map((c) => {
+                      const parent = tasks.find((t) => t.id === c.parentTaskId)
+                      return (
+                        <TaskCard
+                          key={c.id}
+                          refKey={c.refKey}
+                          type="context"
+                          question={c.question}
+                          answer={c.answer}
+                          parentRefKey={parent?.refKey}
+                        />
+                      )
+                    })
+              }
             </div>
           </section>
         </div>
@@ -424,8 +513,11 @@ export default function BoardPage() {
         <TaskDrawer
           task={openTask}
           boardId={boardId}
+          contextCards={contextCards.filter((c) => c.parentTaskId === openTask.id)}
           onClose={() => setOpenTaskId(null)}
           onUpdate={(changes) => handleTaskUpdate(openTask.id, changes)}
+          onAddContext={(q, rt) => handleAddContext(openTask.id, q, rt)}
+          onUpdateContext={handleContextUpdate}
         />
       )}
     </div>

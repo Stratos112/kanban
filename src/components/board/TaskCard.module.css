@@ -50,6 +50,11 @@
   letter-spacing: 0.04em;
 }
 
+.parentLink {
+  color: var(--color-col-context);
+  opacity: 0.8;
+}
+
 .priorityWell {
   border-radius: 999px;
   padding: 18px 24px 18px 90px;

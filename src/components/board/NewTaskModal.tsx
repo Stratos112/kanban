@@ -9,7 +9,16 @@ export interface NewTaskPayload {
   priority: TaskPriority
   dueDate: string
   labels: { name: string }[]
+  contextItems: { question: string; relationType: string }[]
 }
+
+const RELATION_TYPES = [
+  { value: 'question',   label: 'Question' },
+  { value: 'assumption', label: 'Assumption' },
+  { value: 'decision',   label: 'Decision' },
+  { value: 'risk',       label: 'Risk' },
+  { value: 'note',       label: 'Note' },
+]
 
 interface Props {
   onClose: () => void
@@ -106,11 +115,12 @@ function LabelPicker({ selected, onChange }: LabelPickerProps) {
 
 /* ── Modal ───────────────────────────────────────────── */
 export default function NewTaskModal({ onClose, onSubmit }: Props) {
-  const [title, setTitle]       = useState('')
-  const [status, setStatus]     = useState<Exclude<TaskStatus, 'context'>>('backlog')
-  const [priority, setPriority] = useState<TaskPriority>('normal')
-  const [dueDate, setDueDate]   = useState('')
-  const [labels, setLabels]     = useState<string[]>([])
+  const [title, setTitle]             = useState('')
+  const [status, setStatus]           = useState<Exclude<TaskStatus, 'context'>>('backlog')
+  const [priority, setPriority]       = useState<TaskPriority>('normal')
+  const [dueDate, setDueDate]         = useState('')
+  const [labels, setLabels]           = useState<string[]>([])
+  const [contextItems, setContextItems] = useState<{ question: string; relationType: string }[]>([])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -127,6 +137,7 @@ export default function NewTaskModal({ onClose, onSubmit }: Props) {
       priority,
       dueDate,
       labels: labels.map((name) => ({ name })),
+      contextItems: contextItems.filter((c) => c.question.trim()),
     })
   }
 
@@ -139,64 +150,112 @@ export default function NewTaskModal({ onClose, onSubmit }: Props) {
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit}>
-          <label className={styles.fieldGroup}>
-            <span className={styles.fieldLabel}>Title</span>
-            <input
-              className={styles.input}
-              type="text"
-              placeholder="What needs to be done?"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              autoFocus
-            />
-          </label>
-
-          <div className={styles.row}>
+          <div className={styles.formBody}>
             <label className={styles.fieldGroup}>
-              <span className={styles.fieldLabel}>Status</span>
-              <select
-                className={styles.select}
-                value={status}
-                onChange={(e) => setStatus(e.target.value as Exclude<TaskStatus, 'context'>)}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className={styles.fieldGroup}>
-              <span className={styles.fieldLabel}>Priority</span>
-              <select
-                className={styles.select}
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              >
-                {PRIORITIES.map((p) => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className={styles.row}>
-            <label className={styles.fieldGroup}>
-              <span className={styles.fieldLabel}>
-                Due Date <span className={styles.optional}>(optional)</span>
-              </span>
+              <span className={styles.fieldLabel}>Title</span>
               <input
-                className={`${styles.input} ${styles.dateInput}`}
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                className={styles.input}
+                type="text"
+                placeholder="What needs to be done?"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                autoFocus
               />
             </label>
 
-            <div className={styles.fieldGroup}>
-              <span className={styles.fieldLabel}>
-                Labels <span className={styles.optional}>(optional)</span>
-              </span>
-              <LabelPicker selected={labels} onChange={setLabels} />
+            <div className={styles.row}>
+              <label className={styles.fieldGroup}>
+                <span className={styles.fieldLabel}>Status</span>
+                <select
+                  className={styles.select}
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as Exclude<TaskStatus, 'context'>)}
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={styles.fieldGroup}>
+                <span className={styles.fieldLabel}>Priority</span>
+                <select
+                  className={styles.select}
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as TaskPriority)}
+                >
+                  {PRIORITIES.map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className={styles.row}>
+              <label className={styles.fieldGroup}>
+                <span className={styles.fieldLabel}>
+                  Due Date <span className={styles.optional}>(optional)</span>
+                </span>
+                <input
+                  className={`${styles.input} ${styles.dateInput}`}
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+              </label>
+
+              <div className={styles.fieldGroup}>
+                <span className={styles.fieldLabel}>
+                  Labels <span className={styles.optional}>(optional)</span>
+                </span>
+                <LabelPicker selected={labels} onChange={setLabels} />
+              </div>
+            </div>
+
+            {/* Context section */}
+            <div className={styles.contextSection}>
+              <div className={styles.contextHeader}>
+                <span className={styles.fieldLabel}>
+                  Context <span className={styles.optional}>(optional)</span>
+                </span>
+                <button
+                  type="button"
+                  className={styles.addContextBtn}
+                  onClick={() => setContextItems((prev) => [...prev, { question: '', relationType: 'question' }])}
+                >
+                  + Add
+                </button>
+              </div>
+              {contextItems.map((item, i) => (
+                <div key={i} className={styles.contextItem}>
+                  <select
+                    className={styles.contextTypeSelect}
+                    value={item.relationType}
+                    onChange={(e) => setContextItems((prev) =>
+                      prev.map((c, idx) => idx === i ? { ...c, relationType: e.target.value } : c)
+                    )}
+                  >
+                    {RELATION_TYPES.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                  <input
+                    className={styles.contextInput}
+                    type="text"
+                    placeholder="Describe the context…"
+                    value={item.question}
+                    onChange={(e) => setContextItems((prev) =>
+                      prev.map((c, idx) => idx === i ? { ...c, question: e.target.value } : c)
+                    )}
+                  />
+                  <button
+                    type="button"
+                    className={styles.removeContextBtn}
+                    onClick={() => setContextItems((prev) => prev.filter((_, idx) => idx !== i))}
+                    aria-label="Remove"
+                  >✕</button>
+                </div>
+              ))}
             </div>
           </div>
 
