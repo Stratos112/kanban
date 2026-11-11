@@ -61,6 +61,7 @@ export interface Database {
           board_id: string | null
           parent_task_id: string | null
           context_relation_type: string | null
+          parent_link_type: string | null
           created_at: string
           updated_at: string
         }
@@ -80,6 +81,7 @@ export interface Database {
           board_id?: string | null
           parent_task_id?: string | null
           context_relation_type?: string | null
+          parent_link_type?: string | null
           created_at?: string
           updated_at?: string
         }

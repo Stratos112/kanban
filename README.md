@@ -1,142 +1,90 @@
 # Kanban Task Board
 
-A polished, fully-featured Kanban board built for the Next Play Games SDE internship assessment.
+A polished, real-time collaborative Kanban board built for the Next Play Games SDE internship assessment.
 
 ## Stack
 
-- **React + TypeScript** — UI and type safety
-- **Vite** — dev server and build tooling
-- **CSS Modules** — component-scoped plain CSS, no utility framework
-- **@dnd-kit/core** — accessible drag-and-drop
-- **Recharts** — composable charts for the Review view
-- **Supabase** — Postgres database, anonymous auth, Row Level Security
-- **Vercel** — hosting and CI/CD from GitHub
+| | |
+|---|---|
+| **React 19 + TypeScript** | UI and type safety |
+| **Vite 8** | Dev server and build tooling |
+| **CSS Modules** | Component-scoped plain CSS, no utility framework |
+| **@dnd-kit** | Accessible drag-and-drop |
+| **Recharts** | Charts for the Review view |
+| **Supabase** | Postgres, anonymous auth, Realtime, RLS |
+| **Vercel** | Hosting and CI/CD from GitHub |
 
 ---
 
-## App Structure
+## What's built
 
-Three views connected by a persistent sidebar. The board is shared — all guests see all tasks and the full analytics picture. Guest sessions are created silently on first load; no sign-up required.
+### Multi-board workspace
+The app starts at `/` — a list of all boards. Creating a board generates a unique slug and navigates to it. All boards share the same guest auth pool; anyone with the URL can join.
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  Sidebar                                                         │
-│  ┌──────┐  ┌────────────────────────────────────────────────┐   │
-│  │      │  │                                                │   │
-│  │  🗂  │  │  BOARD VIEW                                    │   │
-│  │Board │  │  Six columns · drag-and-drop · filter bar      │   │
-│  │      │  │                          ┌──────────────────┐  │   │
-│  │  👤  │  │  [Backlog][Ready][In Pr… │  Task Detail     │  │   │
-│  │Profil│  │                          │  Drawer          │  │   │
-│  │      │  │                          │  · relationships │  │   │
-│  │  📊  │  │                          │  · activity log  │  │   │
-│  │Review│  │                          │  · context links │  │   │
-│  │      │  │                          └──────────────────┘  │   │
-│  └──────┘  └────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### Board
-The default view. Six columns represent the full task lifecycle. Tasks drag between columns to update status. Clicking a card opens a detail drawer on the right — this is where relationships, the activity log, and linked context cards live. A filter bar across the top narrows by search, priority, assignee, or label.
-
-### Profile
-No login screen. On first load a guest session is created silently via Supabase anonymous auth. The profile page lets the user set a nickname and pick an avatar color. Below that, a personal activity feed shows their recent actions across the shared board — tasks they moved, edited, assigned, or answered.
-
-### Review
-A lightweight analytics dashboard showing the health of the whole board. Four charts, all guests have full visibility.
-
-| Chart | Type | Shows |
-|---|---|---|
-| Status snapshot | Donut | Current task count by column |
-| Completion over time | Area | Tasks moved to Completed per day |
-| Work by assignee | Horizontal bar | Open vs. completed per profile |
-| Label breakdown | Bar | Task count per label |
-
----
-
-## Board Layout
-
-Tasks flow left to right through the first five columns via drag-and-drop. The **Context** column is permanent — context cards (questions, notes, blockers) live there and never move, but can be linked to any task.
+### Kanban board (`/board/:slug`)
+Six columns represent the full task lifecycle. Tasks drag between columns to update status; order within a column is preserved and persisted. Changes sync in real-time to all open sessions via Supabase Realtime — a collaborator's move appears instantly without a reload.
 
 ```
  Backlog    Ready    In Progress   In Review   Completed  |  Context
-┌────────┐ ┌───────┐ ┌───────────┐ ┌──────────┐ ┌───────────┐ ┌─────────┐
-│        │ │       │ │           │ │          │ │           │ │ [?] Q&A │
-│ [task] │ │[task] │ │  [task]   │ │  [task]  │ │  [task]   │ │ [!] note│
-│ [task] │ │[task] │ │  [task]   │ │          │ │  [task]   │ │ [x] blkr│
-│        │ │       │ │           │ │          │ │           │ │         │
-└────────┘ └───────┘ └───────────┘ └──────────┘ └───────────┘ └─────────┘
-   ◀─────────────── drag-and-drop ──────────────▶    context cards pinned ──▶
+┌────────┐ ┌───────┐ ┌───────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐
+│ [task] │ │[task] │ │  [task]   │ │  [task]  │ │  [task]  │ │ [?] Q   │
+│ [task] │ │[task] │ │  [task]   │ │          │ │  [task]  │ │ [!] note│
+└────────┘ └───────┘ └───────────┘ └──────────┘ └──────────┘ └─────────┘
+   ◀──────────────── drag-and-drop ───────────────▶    context pinned ──▶
 ```
 
-## Task Relationships
+### Task detail drawer
+Clicking any card opens a slide-in drawer. All fields are editable inline and save on change — no submit button. Fields: title, status, priority, due date, labels.
 
-Tasks and context cards can be linked. Each relationship type is directional — the inverse is derived automatically in the UI.
+### Context cards
+Context cards are peer tasks that live in the Context column, linked to a parent task. Each has a **relation type** (Question / Assumption / Decision / Risk / Note), a **question** field, and an **answer** field filled in later. The relation type can be changed but the link to the parent is permanent.
 
-```mermaid
-graph LR
-  A[Task A] -->|blocked_by| B[Task B]
-  B -.->|blocking| A
+Context can be added two ways:
+- **New Task modal** — attach one or more context items at creation time
+- **Task drawer** — "+ Add" in the Context section of any open task
 
-  C[Task C] -->|waiting_on| D[Task D]
-  D -.->|completes| C
+Context cards show `→ KAN-N` on the board to identify their parent task.
 
-  E[Subtask] -->|subtask| F[Parent Task]
-  F -.->|parent of| E
+### Labels
+A dedicated Labels page (`/board/:slug/settings`) manages the board's label palette — 9 preset labels seeded on first visit, plus custom labels. Each label has a 12-swatch color picker. Labels are assignable to tasks from the New Task modal and the task drawer.
 
-  G[Task G] -->|details| H{{Context Card}}
-  H -.->|subject| G
-```
+### Guest auth
+On first load, a guest session is created silently via Supabase anonymous auth. No sign-up, no email. Each guest gets a random display name (`guest_CrazyAntelope`) and an avatar color. Identity persists across page refreshes via `localStorage`. The Profile page lets guests set a custom nickname.
 
-A **context card** lives in the Context column and holds a `question` + `answer` instead of a title and description. It shares labels, priority, and assignee with regular tasks. Tasks link to context cards via the `details` relationship to surface relevant questions or blockers without being gated by them.
+### Real-time sync
+All task mutations (create, update, reorder, status change) are persisted immediately. A Supabase Realtime channel scoped to the board's `board_id` pushes `postgres_changes` events to all connected clients. The subscription is paused during an active drag so a concurrent update doesn't interrupt mid-move.
 
 ---
 
-## Features
+## Roadmap
 
-**Core**
-- Six-column shared Kanban board with drag-and-drop reordering
-- Guest sessions via Supabase anonymous auth — no sign-up, all guests see the full board
-- RLS enforced: all users can read; only the creator can edit or delete their own items
+The items below are the remaining scope before the final submission.
 
-**Tasks**
-- Create tasks with title, description, priority (`low` / `normal` / `high`), and due date
-- Human-readable task IDs (`KAN-1`, `KAN-2`, …)
-- Due date indicators — overdue and due-soon highlighted on the card
-- Assign tasks to any team profile
-
-**Context Cards**
-- Permanent cards in the Context column with `question` and `answer` fields
-- Same labels, priority, and assignee support as tasks
-- Linked to tasks via relationships (`details` ↔ `subject`, `blocked_by` ↔ `blocking`)
-
-**Task Relationships**
-- `blocked_by` / `blocking` — task is waiting on another to be resolved
-- `waiting_on` / `completes` — task depends on another completing first
-- `subtask` / `parent` — hierarchical; parent implicitly waits on all children
-- `details` / `subject` — informational link to a context card, no blocking implied
-
-**Team & Organization**
-- Guest profiles with nickname and avatar color (set on the Profile page)
-- Labels / tags with custom color, assignable to tasks and context cards, filterable
-- Activity log per task — timeline of status changes, edits, and assignments
-
-**Review**
-- Donut, area, horizontal bar, and bar charts
-- All charts reflect the full shared board, visible to every guest
-
-**Search & Filter**
-- Search by title
-- Filter by priority, assignee, or label
+| # | Item | Notes |
+|---|---|---|
+| 1 | ~~Rename Settings → Labels~~ | Done |
+| 2 | Context cards — finish | Show context inline on task cards; answer editing polish |
+| 3 | Assignment | User can claim a task; avatar shown on card; filter by assignee |
+| 3b| Sign-In | When a user is signed in they should only see their tasks |
+| 4 | Task relationships | `blocked_by`, `waiting_on`, `subtask`, `details` between tasks |
+| 5 | Completion trickle-down | Completing a task propagates state to dependent/blocked tasks |
+| 6 | Review panel | Wire real data into Recharts — status donut, completion over time, label breakdown |
+| 7 | Audit against docs | Cross-check recommendations, README, and assessment brief for gaps |
+| 8 | Test, clean DB, deploy | Final polish, seed data cleared, Vercel production deploy |
 
 ---
 
-## Database Schema
-
-Six tables. The board is shared — `tasks` are readable by all authenticated users (including anonymous guests). Write operations are scoped to the creator via RLS. See `schema.sql` for the full schema and policies.
+## Database schema
 
 ```mermaid
 erDiagram
+  boards {
+    uuid id PK
+    text name
+    text invite_code
+    timestamptz created_at
+  }
+
   profiles {
     uuid id PK
     text display_name
@@ -149,21 +97,22 @@ erDiagram
     bigint ref_key
     text type
     text title
-    text description
     text question
     text answer
     text status
     text priority
     date due_date
     float8 position
-    uuid assignee_id FK
+    uuid board_id FK
     uuid user_id FK
+    uuid parent_task_id FK
+    text context_relation_type
     timestamptz created_at
-    timestamptz updated_at
   }
 
   labels {
     uuid id PK
+    uuid board_id FK
     uuid user_id FK
     text name
     text color
@@ -181,34 +130,26 @@ erDiagram
     text type
   }
 
-  activity_log {
-    uuid id PK
-    uuid task_id FK
-    uuid actor_id FK
-    text action
-    jsonb payload
-    timestamptz created_at
-  }
-
-  profiles ||--o{ tasks : "assignee_id"
-  profiles ||--o{ activity_log : "actor_id"
-  tasks ||--o{ task_labels : ""
-  labels ||--o{ task_labels : ""
+  boards ||--o{ tasks : "board_id"
+  boards ||--o{ labels : "board_id"
+  profiles ||--o{ tasks : "user_id"
+  tasks ||--o{ task_labels : "task_id"
+  labels ||--o{ task_labels : "label_id"
+  tasks ||--o{ tasks : "parent_task_id"
   tasks ||--o{ task_relationships : "from_task_id"
   tasks ||--o{ task_relationships : "to_task_id"
-  tasks ||--o{ activity_log : "task_id"
 ```
 
 ---
 
-## Local Development
+## Local development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Requires a `.env` file with:
+Requires a `.env` file:
 
 ```
 VITE_SUPABASE_URL=...

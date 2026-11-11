@@ -106,7 +106,7 @@ export default function SettingsPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Settings</h1>
+        <h1 className={styles.title}>Labels</h1>
       </header>
 
       <div className={styles.content}>

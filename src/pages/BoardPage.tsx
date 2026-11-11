@@ -48,6 +48,9 @@ export interface ContextCard {
   question: string
   answer?: string
   relationType: string
+  linkType: string
+  priority: TaskPriority
+  labels: { name: string; color?: string }[]
   parentTaskId: string
 }
 
@@ -152,7 +155,13 @@ export default function BoardPage() {
           refKey:       row.ref_key,
           question:     row.question ?? '',
           answer:       row.answer ?? undefined,
-          relationType: row.context_relation_type ?? 'question',
+          relationType: row.context_relation_type ?? 'details',
+          linkType:     (row as any).parent_link_type ?? 'extra_info',
+          priority:     (row.priority ?? 'normal') as TaskPriority,
+          labels:       (row.task_labels as any[])
+                          .map((tl) => tl.labels)
+                          .filter(Boolean)
+                          .map((l: { name: string; color: string }) => ({ name: l.name, color: l.color })),
           parentTaskId: row.parent_task_id ?? '',
         }))
     )
@@ -202,32 +211,38 @@ export default function BoardPage() {
       }
     }
 
-    // Create any context items submitted with the task
-    const newContextCards: ContextCard[] = []
-    for (const item of payload.contextItems) {
-      const { data: ctxRow } = await supabase
-        .from('tasks')
-        .insert({
-          user_id:               userId,
-          board_id:              boardId,
-          type:                  'context',
-          status:                'context',
-          question:              item.question,
-          context_relation_type: item.relationType,
-          parent_task_id:        row.id,
-          position:              contextCards.length + newContextCards.length,
-        })
-        .select()
-        .single()
+    // Always create a context card alongside the task
+    const { data: ctxRow } = await supabase
+      .from('tasks')
+      .insert({
+        user_id:               userId,
+        board_id:              boardId,
+        type:                  'context',
+        status:                'context',
+        question:              payload.context.text || '',
+        context_relation_type: payload.context.relationType,
+        parent_link_type:      payload.context.linkType,
+        priority:              payload.context.priority,
+        parent_task_id:        row.id,
+        position:              contextCards.length,
+      })
+      .select()
+      .single()
 
-      if (ctxRow) {
-        newContextCards.push({
-          id:           ctxRow.id,
-          refKey:       ctxRow.ref_key,
-          question:     ctxRow.question ?? '',
-          relationType: item.relationType,
-          parentTaskId: row.id,
-        })
+    // Attach labels to the context card
+    const ctxLabels: { name: string; color?: string }[] = []
+    if (ctxRow && payload.context.labels.length > 0) {
+      for (const name of payload.context.labels) {
+        const { data: lbl } = await supabase
+          .from('labels')
+          .select('id, color')
+          .eq('board_id', boardId)
+          .eq('name', name)
+          .maybeSingle()
+        if (lbl) {
+          await supabase.from('task_labels').insert({ task_id: ctxRow.id, label_id: lbl.id })
+          ctxLabels.push({ name, color: lbl.color })
+        }
       }
     }
 
@@ -241,12 +256,29 @@ export default function BoardPage() {
       dueDate:  row.due_date ?? undefined,
       labels:   payload.labels,
     }])
-    if (newContextCards.length) setContextCards((prev) => [...prev, ...newContextCards])
+    if (ctxRow) {
+      setContextCards((prev) => [...prev, {
+        id:           ctxRow.id,
+        refKey:       ctxRow.ref_key,
+        question:     ctxRow.question ?? '',
+        relationType: payload.context.relationType,
+        linkType:     payload.context.linkType,
+        priority:     payload.context.priority,
+        labels:       ctxLabels,
+        parentTaskId: row.id,
+      }])
+    }
     setModalOpen(false)
   }
 
   function handleTaskUpdate(id: string, changes: Partial<BoardTask>) {
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...changes } : t))
+  }
+
+  function handleTaskDelete(id: string) {
+    setTasks((prev) => prev.filter((t) => t.id !== id))
+    setContextCards((prev) => prev.filter((c) => c.parentTaskId !== id))
+    setOpenTaskId(null)
   }
 
   async function handleAddContext(parentTaskId: string, question: string, relationType: string) {
@@ -516,6 +548,7 @@ export default function BoardPage() {
           contextCards={contextCards.filter((c) => c.parentTaskId === openTask.id)}
           onClose={() => setOpenTaskId(null)}
           onUpdate={(changes) => handleTaskUpdate(openTask.id, changes)}
+          onDelete={handleTaskDelete}
           onAddContext={(q, rt) => handleAddContext(openTask.id, q, rt)}
           onUpdateContext={handleContextUpdate}
         />

@@ -9,6 +9,12 @@
   z-index: 100;
 }
 
+/* ── Modal row: modal + context panel side by side ── */
+.modalRow {
+  display: flex;
+  align-items: flex-start;
+}
+
 .modal {
   width: 500px;
   max-height: 88vh;
@@ -21,6 +27,7 @@
     0 0 0 1px rgba(255, 255, 255, 0.03);
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
 /* ── Modal header ───────────────────────────────── */
@@ -89,7 +96,7 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 20px 20px 0;
+  padding: 20px 20px 20px;
   overflow-y: auto;
   flex: 1;
 }
@@ -284,95 +291,223 @@
   border-color: rgba(99, 130, 180, 0.5);
 }
 
-/* ── Context section ────────────────────────────── */
-.contextSection {
+/* ── Context seed block ─────────────────────────── */
+.contextSeed {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-bottom: 4px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-col-context) 8%, var(--color-surface-raised));
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 20%, var(--color-border));
+  border-left: 3px solid color-mix(in srgb, var(--color-col-context) 50%, transparent);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  user-select: none;
 }
 
-.contextHeader {
+.contextSeed:hover {
+  background: color-mix(in srgb, var(--color-col-context) 13%, var(--color-surface-raised));
+  border-color: color-mix(in srgb, var(--color-col-context) 35%, var(--color-border));
+  border-left-color: color-mix(in srgb, var(--color-col-context) 75%, transparent);
+}
+
+.contextSeedActive {
+  background: color-mix(in srgb, var(--color-col-context) 13%, var(--color-surface-raised));
+  border-color: color-mix(in srgb, var(--color-col-context) 35%, var(--color-border));
+  border-left-color: var(--color-col-context);
+}
+
+.contextSeedBadge {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-col-context);
+  background: color-mix(in srgb, var(--color-col-context) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 30%, transparent);
+  border-radius: 999px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.contextSeedText {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.7;
+}
+
+.contextSeedTextFilled {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+.contextSeedArrow {
+  color: color-mix(in srgb, var(--color-col-context) 55%, transparent);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.contextSeedActive .contextSeedArrow,
+.contextSeed:hover .contextSeedArrow {
+  color: var(--color-col-context);
+}
+
+/* ── Context panel (slides in beside modal) ─────── */
+.contextPanelWrap {
+  width: 0;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.contextPanelWrapOpen {
+  width: 352px; /* 340px panel + 12px gap */
+}
+
+.contextPanel {
+  width: 340px;
+  margin-left: 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 30%, var(--color-border));
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.55),
+    0 32px 64px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 0 transparent;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.contextPanelHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 0 16px;
+  height: 52px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-col-context) 20%, var(--color-border));
+  background: color-mix(in srgb, var(--color-col-context) 7%, var(--color-surface));
+  flex-shrink: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
-.addContextBtn {
+.contextPanelTitle {
   font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 700;
-  color: var(--color-accent);
-  background: transparent;
-  border: none;
-  padding: 2px 4px;
-  cursor: pointer;
-  opacity: 0.85;
-  transition: opacity 0.1s;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-col-context);
 }
-.addContextBtn:hover { opacity: 1; }
 
-.contextItem {
+.contextPanelBody {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 16px;
+  flex: 1;
 }
 
-.contextTypeSelect {
-  height: 32px;
-  padding: 0 8px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+.contextRelSelect {
+  height: 30px;
+  padding: 0 28px 0 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 30%, var(--color-border));
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23e879f9' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center / 10px,
+    color-mix(in srgb, var(--color-col-context) 10%, var(--color-surface-raised));
+  color: var(--color-col-context);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  align-self: flex-start;
+}
+
+.contextRelSelect:focus {
+  border-color: color-mix(in srgb, var(--color-col-context) 60%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-col-context) 15%, transparent);
+}
+
+.contextRelSelect option {
   background: var(--color-surface-raised);
+  color: var(--color-text);
+  text-transform: none;
+  font-size: 12px;
+}
+
+.contextPanelMetaGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.contextLinkSelect {
+  height: 30px;
+  padding: 0 24px 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23768390' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center / 10px,
+    color-mix(in srgb, var(--color-surface-raised) 80%, transparent);
   color: var(--color-text-muted);
   font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.03em;
   outline: none;
   cursor: pointer;
-  flex-shrink: 0;
   appearance: none;
-  padding-right: 20px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23768390' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 6px center;
-  background-size: 10px;
+  width: 100%;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.contextLinkSelect:focus {
+  border-color: color-mix(in srgb, var(--color-col-context) 40%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-col-context) 10%, transparent);
+}
+.contextLinkSelect option {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
 }
 
-.contextInput {
-  flex: 1;
-  height: 32px;
-  padding: 0 10px;
-  border-radius: var(--radius-md);
+.contextPanelLabelWrap {
+  grid-column: span 1;
+}
+
+.contextTextarea {
+  resize: none;
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   background: var(--color-surface-raised);
   color: var(--color-text);
   font-family: var(--font-sans);
   font-size: 13px;
+  padding: 10px 12px;
   outline: none;
-  transition: border-color 0.15s;
+  line-height: 1.55;
+  min-height: 120px;
+  flex: 1;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.contextInput::placeholder { color: var(--color-text-subtle); }
-.contextInput:focus { border-color: var(--color-col-in-progress); }
 
-.removeContextBtn {
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border: none;
+.contextTextarea::placeholder {
   color: var(--color-text-subtle);
-  font-size: 11px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: color 0.1s, background 0.1s;
 }
-.removeContextBtn:hover {
-  color: var(--color-danger);
-  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+
+.contextTextarea:focus {
+  border-color: color-mix(in srgb, var(--color-col-context) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-col-context) 12%, transparent);
 }
 
 /* ── Actions ────────────────────────────────────── */

@@ -29,7 +29,7 @@ export default function Sidebar() {
         aria-label="Settings"
       >
         <SlidersHorizontal size={18} strokeWidth={1.75} />
-        <span className={styles.label}>Settings</span>
+        <span className={styles.label}>Labels</span>
       </NavLink>
 
       <div className={styles.divider} />

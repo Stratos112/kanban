@@ -275,6 +275,48 @@
   padding-top: 1px;
 }
 
+.contextCardMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.contextMetaSelect {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%23768390' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 6px center / 9px,
+    transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px 20px 2px 8px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  transition: background-color 0.1s, border-color 0.1s;
+}
+.contextMetaSelect:hover {
+  background-color: var(--color-surface-raised);
+  border-color: var(--color-text-subtle);
+}
+.contextMetaSelect option {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.contextCardLabels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 2px;
+}
+
 .contextAnswer {
   width: 100%;
   padding: 8px 12px;
@@ -354,6 +396,73 @@
 }
 .submitContextBtn:hover:not(:disabled) { filter: brightness(1.1); }
 .submitContextBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Delete zone ─────────────────────────────────────── */
+.deleteZone {
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.deleteBtn {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-subtle);
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.deleteBtn:hover { color: var(--color-danger); }
+
+.deleteConfirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.deleteWarning {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-danger);
+}
+
+.deleteActions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.deleteCancelBtn {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.1s, background 0.1s;
+}
+.deleteCancelBtn:hover { color: var(--color-text); background: var(--color-surface-raised); }
+
+.deleteConfirmBtn {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-danger);
+  border: none;
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.1s;
+}
+.deleteConfirmBtn:hover { filter: brightness(1.15); }
 
 /* ── Label picker ────────────────────────────────────── */
 .labelPicker {

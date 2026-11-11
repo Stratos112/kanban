@@ -19,11 +19,15 @@ const PRIORITIES: { value: TaskPriority; label: string }[] = [
 ]
 
 const RELATION_TYPES = [
+  { value: 'details',    label: 'Details' },
   { value: 'question',   label: 'Question' },
   { value: 'assumption', label: 'Assumption' },
-  { value: 'decision',   label: 'Decision' },
-  { value: 'risk',       label: 'Risk' },
-  { value: 'note',       label: 'Note' },
+]
+
+const LINK_TYPES = [
+  { value: 'extra_info', label: 'Extra Info' },
+  { value: 'blocked_by', label: 'Blocked By' },
+  { value: 'waiting_on', label: 'Waiting On' },
 ]
 
 interface AvailableLabel { id: string; name: string; color: string }
@@ -114,13 +118,14 @@ interface Props {
   contextCards: ContextCard[]
   onClose: () => void
   onUpdate: (changes: Partial<BoardTask>) => void
+  onDelete: (id: string) => void
   onAddContext: (question: string, relationType: string) => void
   onUpdateContext: (id: string, changes: Partial<ContextCard>) => void
 }
 
 export default function TaskDrawer({
   task, boardId, contextCards,
-  onClose, onUpdate, onAddContext, onUpdateContext,
+  onClose, onUpdate, onDelete, onAddContext, onUpdateContext,
 }: Props) {
   const [title, setTitle]             = useState(task.title)
   const [status, setStatus]           = useState(task.status)
@@ -128,9 +133,10 @@ export default function TaskDrawer({
   const [dueDate, setDueDate]         = useState(task.dueDate ?? '')
   const [available, setAvailable]     = useState<AvailableLabel[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [addingContext, setAddingContext] = useState(false)
-  const [newQuestion, setNewQuestion]    = useState('')
-  const [newRelType, setNewRelType]      = useState('question')
+  const [addingContext, setAddingContext]   = useState(false)
+  const [newQuestion, setNewQuestion]      = useState('')
+  const [newRelType, setNewRelType]        = useState('details')
+  const [confirmDelete, setConfirmDelete]  = useState(false)
   const titleRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -212,6 +218,16 @@ export default function TaskDrawer({
     onUpdateContext(card.id, { relationType: val })
   }
 
+  async function saveContextLinkType(card: ContextCard, val: string) {
+    await supabase.from('tasks').update({ parent_link_type: val } as any).eq('id', card.id)
+    onUpdateContext(card.id, { linkType: val })
+  }
+
+  async function saveContextPriority(card: ContextCard, val: TaskPriority) {
+    await supabase.from('tasks').update({ priority: val }).eq('id', card.id)
+    onUpdateContext(card.id, { priority: val })
+  }
+
   async function saveContextAnswer(card: ContextCard, val: string) {
     await supabase.from('tasks').update({ answer: val || null }).eq('id', card.id)
     onUpdateContext(card.id, { answer: val || undefined })
@@ -221,8 +237,14 @@ export default function TaskDrawer({
     if (!newQuestion.trim()) return
     onAddContext(newQuestion.trim(), newRelType)
     setNewQuestion('')
-    setNewRelType('question')
+    setNewRelType('details')
     setAddingContext(false)
+  }
+
+  async function handleDelete() {
+    await supabase.from('tasks').delete().eq('id', task.id)
+    onDelete(task.id)
+    onClose()
   }
 
   return (
@@ -315,6 +337,8 @@ export default function TaskDrawer({
                 key={card.id}
                 card={card}
                 onRelTypeChange={(v) => saveContextRelType(card, v)}
+                onLinkTypeChange={(v) => saveContextLinkType(card, v)}
+                onPriorityChange={(v) => saveContextPriority(card, v)}
                 onAnswerChange={(v) => saveContextAnswer(card, v)}
               />
             ))}
@@ -355,6 +379,22 @@ export default function TaskDrawer({
               <p className={styles.contextEmpty}>No context yet.</p>
             )}
           </div>
+          {/* Delete */}
+          <div className={styles.deleteZone}>
+            {confirmDelete ? (
+              <div className={styles.deleteConfirm}>
+                <span className={styles.deleteWarning}>Remove without completing?</span>
+                <div className={styles.deleteActions}>
+                  <button className={styles.deleteCancelBtn} onClick={() => setConfirmDelete(false)}>Cancel</button>
+                  <button className={styles.deleteConfirmBtn} onClick={handleDelete}>Remove</button>
+                </div>
+              </div>
+            ) : (
+              <button className={styles.deleteBtn} onClick={() => setConfirmDelete(true)}>
+                Remove task
+              </button>
+            )}
+          </div>
         </div>
       </aside>
     </>
@@ -365,10 +405,14 @@ export default function TaskDrawer({
 function ContextCardRow({
   card,
   onRelTypeChange,
+  onLinkTypeChange,
+  onPriorityChange,
   onAnswerChange,
 }: {
   card: ContextCard
   onRelTypeChange: (v: string) => void
+  onLinkTypeChange: (v: string) => void
+  onPriorityChange: (v: TaskPriority) => void
   onAnswerChange: (v: string) => void
 }) {
   const [answer, setAnswer] = useState(card.answer ?? '')
@@ -387,7 +431,40 @@ function ContextCardRow({
             <option key={r.value} value={r.value}>{r.label}</option>
           ))}
         </select>
-        <p className={styles.contextQuestion}>{card.question}</p>
+        <p className={styles.contextQuestion}>{card.question || <em style={{ opacity: 0.5 }}>No description</em>}</p>
+      </div>
+      <div className={styles.contextCardMeta}>
+        <select
+          className={styles.contextMetaSelect}
+          value={card.linkType}
+          onChange={(e) => onLinkTypeChange(e.target.value)}
+        >
+          {LINK_TYPES.map((l) => (
+            <option key={l.value} value={l.value}>{l.label}</option>
+          ))}
+        </select>
+        <select
+          className={styles.contextMetaSelect}
+          value={card.priority}
+          onChange={(e) => onPriorityChange(e.target.value as TaskPriority)}
+        >
+          {PRIORITIES.map((p) => (
+            <option key={p.value} value={p.value}>{p.label}</option>
+          ))}
+        </select>
+        {card.labels.length > 0 && (
+          <div className={styles.contextCardLabels}>
+            {card.labels.map((l) => (
+              <span
+                key={l.name}
+                className={styles.labelChip}
+                style={{ '--label-color': l.color } as React.CSSProperties}
+              >
+                {l.name}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       <textarea
         className={styles.contextAnswer}
