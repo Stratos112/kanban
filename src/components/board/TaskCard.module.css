@@ -89,6 +89,7 @@
 .body { flex: 1; margin-top: -12px; }
 
 .title {
+  font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text);
@@ -97,6 +98,7 @@
 }
 
 .question {
+  font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text);
@@ -105,6 +107,7 @@
 }
 
 .answer {
+  font-family: var(--font-sans);
   font-size: 12px;
   color: var(--color-text-muted);
   margin: 4px 0 0;

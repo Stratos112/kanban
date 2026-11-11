@@ -14,14 +14,14 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #d97706, #f59e0b);
+  background: linear-gradient(135deg, #2d5fad, #4a7fd4);
   color: #fff;
   font-weight: 700;
   font-size: 17px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3), var(--shadow-md);
+  box-shadow: 0 0 0 1px rgba(61, 110, 192, 0.4), var(--shadow-md);
   margin-bottom: 24px;
 }
 
