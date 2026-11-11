@@ -14,7 +14,21 @@
   padding: 0 20px;
   height: 56px;
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background:
+    linear-gradient(
+      115deg,
+      transparent 65%,
+      rgba(210,220,240,0.05) 67%,
+      rgba(210,220,240,0.05) 69%,
+      transparent 71%,
+      rgba(210,220,240,0.11) 74%,
+      rgba(210,220,240,0.11) 77%,
+      transparent 80%,
+      rgba(210,220,240,0.05) 82%,
+      rgba(210,220,240,0.05) 84%,
+      transparent 86%
+    ),
+    var(--color-surface);
   flex-shrink: 0;
   gap: 16px;
 }
@@ -52,7 +66,21 @@
   padding: 0 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  background: var(--color-surface-raised);
+  background:
+    linear-gradient(
+      115deg,
+      transparent 55%,
+      rgba(210,220,240,0.04) 58%,
+      rgba(210,220,240,0.04) 60%,
+      transparent 62%,
+      rgba(210,220,240,0.09) 66%,
+      rgba(210,220,240,0.09) 69%,
+      transparent 72%,
+      rgba(210,220,240,0.04) 74%,
+      rgba(210,220,240,0.04) 76%,
+      transparent 79%
+    ),
+    var(--color-surface-raised);
   color: var(--color-text);
   font-size: 13px;
   outline: none;
@@ -171,7 +199,21 @@
   flex-shrink: 0;
   /* Bold top accent bar */
   border-top: 4px solid var(--col-accent, var(--color-border));
-  background: color-mix(in srgb, var(--color-surface) 85%, var(--col-accent, transparent) 15%);
+  background:
+    linear-gradient(
+      115deg,
+      transparent 50%,
+      rgba(210,220,240,0.05) 53%,
+      rgba(210,220,240,0.05) 55%,
+      transparent 57%,
+      rgba(210,220,240,0.12) 61%,
+      rgba(210,220,240,0.12) 65%,
+      transparent 68%,
+      rgba(210,220,240,0.05) 70%,
+      rgba(210,220,240,0.05) 72%,
+      transparent 75%
+    ),
+    color-mix(in srgb, var(--color-surface) 85%, var(--col-accent, transparent) 15%);
   border-bottom: 1px solid var(--color-border);
 }
 

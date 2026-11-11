@@ -14,7 +14,21 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #2d5fad, #4a7fd4);
+  background:
+    linear-gradient(
+      115deg,
+      transparent 42%,
+      rgba(210,220,240,0.12) 45%,
+      rgba(210,220,240,0.12) 47%,
+      transparent 49%,
+      rgba(210,220,240,0.38) 54%,
+      rgba(210,220,240,0.38) 58%,
+      transparent 61%,
+      rgba(210,220,240,0.12) 63%,
+      rgba(210,220,240,0.12) 65%,
+      transparent 68%
+    ),
+    linear-gradient(135deg, #2d5fad, #4a7fd4);
   color: #fff;
   font-weight: 700;
   font-size: 17px;
@@ -23,6 +37,7 @@
   justify-content: center;
   box-shadow: 0 0 0 1px rgba(61, 110, 192, 0.4), var(--shadow-md);
   margin-bottom: 24px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6), 0 0 8px rgba(0,10,60,0.5);
 }
 
 .nav {
@@ -55,13 +70,43 @@
 }
 
 .active {
-  color: var(--color-accent);
-  background: var(--color-accent-subtle);
+  color: #6b9fd4;
+  background:
+    linear-gradient(
+      115deg,
+      transparent 30%,
+      rgba(210,220,240,0.05) 33%,
+      rgba(210,220,240,0.05) 35%,
+      transparent 37%,
+      rgba(210,220,240,0.11) 42%,
+      rgba(210,220,240,0.11) 46%,
+      transparent 49%,
+      rgba(210,220,240,0.05) 51%,
+      rgba(210,220,240,0.05) 53%,
+      transparent 56%
+    ),
+    var(--color-accent-subtle);
+  box-shadow: inset 0 0 0 1px rgba(107,159,212,0.18);
 }
 
 .active:hover {
-  color: var(--color-accent);
-  background: var(--color-accent-subtle);
+  color: #6b9fd4;
+  background:
+    linear-gradient(
+      115deg,
+      transparent 30%,
+      rgba(210,220,240,0.05) 33%,
+      rgba(210,220,240,0.05) 35%,
+      transparent 37%,
+      rgba(210,220,240,0.11) 42%,
+      rgba(210,220,240,0.11) 46%,
+      transparent 49%,
+      rgba(210,220,240,0.05) 51%,
+      rgba(210,220,240,0.05) 53%,
+      transparent 56%
+    ),
+    var(--color-accent-subtle);
+  box-shadow: inset 0 0 0 1px rgba(107,159,212,0.18);
 }
 
 .label {
