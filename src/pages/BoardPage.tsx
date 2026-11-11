@@ -127,6 +127,7 @@ export default function BoardPage() {
   const [linkSuccess, setLinkSuccess]       = useState<string | null>(null)
   const [selfLinkWarning, setSelfLinkWarning] = useState(false)
   const tasksSnapshot = useRef<BoardTask[]>([])
+  const creatingRef   = useRef(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -265,7 +266,9 @@ export default function BoardPage() {
   }
 
   async function handleCreate(payload: NewTaskPayload) {
-    if (!userId || !boardId) return
+    if (!userId || !boardId || creatingRef.current) return
+    creatingRef.current = true
+    setModalOpen(false) // close immediately so the user can't re-submit while async work runs
 
     const { data: row, error } = await supabase
       .from('tasks')
@@ -359,22 +362,10 @@ export default function BoardPage() {
       }
     }
 
-    const assigneeUser = users.find((u) => u.id === payload.assigneeId)
-    setTasks((prev) => [...prev, {
-      id:       row.id,
-      refKey:   row.ref_key,
-      type:     'task',
-      status:   row.status as Exclude<TaskStatus, 'context'>,
-      title:    row.title ?? '',
-      priority: (row.priority ?? 'normal') as TaskPriority,
-      dueDate:  row.due_date ?? undefined,
-      labels:   payload.labels,
-      assignee: assigneeUser ? { id: assigneeUser.id, name: assigneeUser.displayName, color: assigneeUser.avatarColor } : undefined,
-    }])
-    if (newCtxCards.length > 0) {
-      setContextCards((prev) => [...prev, ...newCtxCards])
-    }
-    setModalOpen(false)
+    // Single authoritative refresh — avoids a race where realtime's loadTasks
+    // completes between this point and a manual setTasks append, producing duplicates.
+    await loadTasks(boardId)
+    creatingRef.current = false
   }
 
   function handleTaskUpdate(id: string, changes: Partial<BoardTask>) {
