@@ -25,15 +25,15 @@ const CONTEXT_TYPES = [
 ]
 
 const LINK_TYPES = [
-  { value: 'extra_info', label: 'Extra Info' },
-  { value: 'blocked_by', label: 'Blocked By' },
+  { value: 'blocking',   label: 'Blocking' },
   { value: 'waiting_on', label: 'Waiting On' },
+  { value: 'more_info',  label: 'More Info' },
 ]
 
-const DEFAULT_LINK: Record<string, string> = {
-  details:    'extra_info',
-  question:   'waiting_on',
-  assumption: 'blocked_by',
+const CONTEXT_PLACEHOLDERS: Record<string, string> = {
+  details:    'Add notes, comments, or descriptions…',
+  question:   'State what you want to find out…',
+  assumption: 'Describe what you\'re assuming to be true…',
 }
 
 interface Props {
@@ -139,10 +139,20 @@ export default function NewTaskModal({ onClose, onSubmit }: Props) {
   const [contextOpen, setContextOpen]         = useState(false)
   const [contextText, setContextText]         = useState('')
   const [contextRelType, setContextRelType]   = useState('details')
-  const [contextLinkType, setContextLinkType] = useState('extra_info')
+  const [contextLinkType, setContextLinkType] = useState('blocking')
   const [contextPriority, setContextPriority] = useState<TaskPriority>('normal')
   const [contextLabels, setContextLabels]     = useState<string[]>([])
-  const contextTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const contextTextareaRef    = useRef<HTMLTextAreaElement>(null)
+  const contextLabelsTouched  = useRef(false)
+
+  useEffect(() => {
+    if (!contextLabelsTouched.current) setContextLabels(labels)
+  }, [labels])
+
+  function handleContextLabelsChange(next: string[]) {
+    contextLabelsTouched.current = true
+    setContextLabels(next)
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -166,7 +176,7 @@ export default function NewTaskModal({ onClose, onSubmit }: Props) {
 
   function handleContextTypeChange(type: string) {
     setContextRelType(type)
-    setContextLinkType(DEFAULT_LINK[type] ?? 'extra_info')
+    if (type === 'question') setContextLinkType('blocking')
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -319,7 +329,7 @@ export default function NewTaskModal({ onClose, onSubmit }: Props) {
               >✕</button>
             </div>
             <div className={styles.contextPanelBody}>
-              <div className={styles.contextPanelMetaGrid}>
+              <div className={styles.contextPanelMeta}>
                 <select
                   className={styles.contextRelSelect}
                   value={contextRelType}
@@ -329,15 +339,17 @@ export default function NewTaskModal({ onClose, onSubmit }: Props) {
                     <option key={r.value} value={r.value}>{r.label}</option>
                   ))}
                 </select>
-                <select
-                  className={styles.contextLinkSelect}
-                  value={contextLinkType}
-                  onChange={(e) => setContextLinkType(e.target.value)}
-                >
-                  {LINK_TYPES.map((l) => (
-                    <option key={l.value} value={l.value}>{l.label}</option>
-                  ))}
-                </select>
+                {contextRelType === 'question' && (
+                  <select
+                    className={styles.contextLinkSelect}
+                    value={contextLinkType}
+                    onChange={(e) => setContextLinkType(e.target.value)}
+                  >
+                    {LINK_TYPES.map((l) => (
+                      <option key={l.value} value={l.value}>{l.label}</option>
+                    ))}
+                  </select>
+                )}
                 <select
                   className={styles.contextLinkSelect}
                   value={contextPriority}
@@ -348,13 +360,13 @@ export default function NewTaskModal({ onClose, onSubmit }: Props) {
                   ))}
                 </select>
                 <div className={styles.contextPanelLabelWrap}>
-                  <LabelPicker selected={contextLabels} onChange={setContextLabels} />
+                  <LabelPicker selected={contextLabels} onChange={handleContextLabelsChange} />
                 </div>
               </div>
               <textarea
                 ref={contextTextareaRef}
                 className={styles.contextTextarea}
-                placeholder="Add context, notes, or descriptions…"
+                placeholder={CONTEXT_PLACEHOLDERS[contextRelType] ?? 'Add context…'}
                 value={contextText}
                 onChange={(e) => setContextText(e.target.value)}
                 rows={5}

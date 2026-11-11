@@ -156,7 +156,7 @@ export default function BoardPage() {
           question:     row.question ?? '',
           answer:       row.answer ?? undefined,
           relationType: row.context_relation_type ?? 'details',
-          linkType:     (row as any).parent_link_type ?? 'extra_info',
+          linkType:     (row as any).parent_link_type ?? 'blocking',
           priority:     (row.priority ?? 'normal') as TaskPriority,
           labels:       (row.task_labels as any[])
                           .map((tl) => tl.labels)

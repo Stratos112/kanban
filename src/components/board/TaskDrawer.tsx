@@ -25,9 +25,9 @@ const RELATION_TYPES = [
 ]
 
 const LINK_TYPES = [
-  { value: 'extra_info', label: 'Extra Info' },
-  { value: 'blocked_by', label: 'Blocked By' },
+  { value: 'blocking',   label: 'Blocking' },
   { value: 'waiting_on', label: 'Waiting On' },
+  { value: 'more_info',  label: 'More Info' },
 ]
 
 interface AvailableLabel { id: string; name: string; color: string }
@@ -434,15 +434,17 @@ function ContextCardRow({
         <p className={styles.contextQuestion}>{card.question || <em style={{ opacity: 0.5 }}>No description</em>}</p>
       </div>
       <div className={styles.contextCardMeta}>
-        <select
-          className={styles.contextMetaSelect}
-          value={card.linkType}
-          onChange={(e) => onLinkTypeChange(e.target.value)}
-        >
-          {LINK_TYPES.map((l) => (
-            <option key={l.value} value={l.value}>{l.label}</option>
-          ))}
-        </select>
+        {card.relationType === 'question' && (
+          <select
+            className={styles.contextMetaSelect}
+            value={card.linkType ?? 'blocking'}
+            onChange={(e) => onLinkTypeChange(e.target.value)}
+          >
+            {LINK_TYPES.map((l) => (
+              <option key={l.value} value={l.value}>{l.label}</option>
+            ))}
+          </select>
+        )}
         <select
           className={styles.contextMetaSelect}
           value={card.priority}

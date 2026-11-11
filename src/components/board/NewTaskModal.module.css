@@ -447,10 +447,11 @@
   font-size: 12px;
 }
 
-.contextPanelMetaGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.contextPanelMeta {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
 }
 
 .contextLinkSelect {
@@ -469,7 +470,7 @@
   outline: none;
   cursor: pointer;
   appearance: none;
-  width: 100%;
+  flex-shrink: 0;
   transition: border-color 0.15s, background-color 0.15s;
 }
 .contextLinkSelect:focus {
@@ -482,7 +483,8 @@
 }
 
 .contextPanelLabelWrap {
-  grid-column: span 1;
+  flex: 1;
+  min-width: 100px;
 }
 
 .contextTextarea {
