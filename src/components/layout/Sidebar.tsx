@@ -1,20 +1,17 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useParams } from 'react-router-dom'
 import { LayoutDashboard, User, BarChart2 } from 'lucide-react'
 import styles from './Sidebar.module.css'
 
-const NAV_MAIN = [
-  { to: '/', icon: LayoutDashboard, label: 'Board' },
-  { to: '/review', icon: BarChart2, label: 'Review' },
-] as const
-
 export default function Sidebar() {
+  const { slug } = useParams<{ slug: string }>()
+  const base = `/board/${slug}`
+
   return (
     <nav className={styles.sidebar} aria-label="Main navigation">
       <div className={styles.logo}>K</div>
 
       <NavLink
-        to="/profile"
-        end
+        to={`${base}/profile`}
         className={({ isActive }) =>
           `${styles.profileLink} ${isActive ? styles.profileActive : ''}`
         }
@@ -27,11 +24,14 @@ export default function Sidebar() {
       <div className={styles.divider} />
 
       <ul className={styles.nav}>
-        {NAV_MAIN.map(({ to, icon: Icon, label }) => (
+        {[
+          { to: base,           icon: LayoutDashboard, label: 'Board', end: true },
+          { to: `${base}/review`, icon: BarChart2,       label: 'Review', end: false },
+        ].map(({ to, icon: Icon, label, end }) => (
           <li key={to}>
             <NavLink
               to={to}
-              end
+              end={end}
               className={({ isActive }) =>
                 `${styles.link} ${isActive ? styles.active : ''}`
               }

@@ -6,6 +6,24 @@ export type RelationshipType = 'blocked_by' | 'waiting_on' | 'subtask' | 'detail
 export interface Database {
   public: {
     Tables: {
+      boards: {
+        Row: {
+          id:          string
+          name:        string
+          invite_code: string
+          created_at:  string
+        }
+        Insert: {
+          id?:          string
+          name?:        string
+          invite_code:  string
+          created_at?:  string
+        }
+        Update: {
+          name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           id: string
@@ -40,6 +58,7 @@ export interface Database {
           position: number
           assignee_id: string | null
           user_id: string
+          board_id: string | null
           created_at: string
           updated_at: string
         }
@@ -56,6 +75,7 @@ export interface Database {
           position?: number
           assignee_id?: string | null
           user_id: string
+          board_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -154,6 +174,7 @@ export interface Database {
 }
 
 // Convenience row types
+export type Board   = Database['public']['Tables']['boards']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Task = Database['public']['Tables']['tasks']['Row']
 export type Label = Database['public']['Tables']['labels']['Row']
