@@ -1,5 +1,5 @@
 import { NavLink, useParams } from 'react-router-dom'
-import { LayoutDashboard, User, BarChart2 } from 'lucide-react'
+import { LayoutDashboard, User, SlidersHorizontal, BarChart2 } from 'lucide-react'
 import styles from './Sidebar.module.css'
 
 export default function Sidebar() {
@@ -19,6 +19,17 @@ export default function Sidebar() {
       >
         <User size={18} strokeWidth={1.75} />
         <span className={styles.label}>Profile</span>
+      </NavLink>
+
+      <NavLink
+        to={`${base}/settings`}
+        className={({ isActive }) =>
+          `${styles.profileLink} ${isActive ? styles.profileActive : ''}`
+        }
+        aria-label="Settings"
+      >
+        <SlidersHorizontal size={18} strokeWidth={1.75} />
+        <span className={styles.label}>Settings</span>
       </NavLink>
 
       <div className={styles.divider} />

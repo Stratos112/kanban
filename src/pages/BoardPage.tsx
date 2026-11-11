@@ -84,7 +84,7 @@ export default function BoardPage() {
       labels:   (row.task_labels as any[])
                   .map((tl) => tl.labels)
                   .filter(Boolean)
-                  .map((l: { name: string }) => ({ name: l.name })),
+                  .map((l: { name: string; color: string }) => ({ name: l.name, color: l.color })),
     })))
     setLoadingTasks(false)
   }
