@@ -371,6 +371,7 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
                     className={`${styles.input} ${styles.dateInput}`}
                     type="date"
                     value={dueDate}
+                    min={new Date().toLocaleDateString('en-CA')}
                     onChange={(e) => setDueDate(e.target.value)}
                   />
                 </label>

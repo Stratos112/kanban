@@ -91,6 +91,11 @@ export default function ContextCardModal({ card, parentTask, onClose, onUpdate }
     onUpdate(card.id, { answer: answer || undefined })
   }
 
+  async function handleDone() {
+    await Promise.all([saveText(), saveAnswer()])
+    onClose()
+  }
+
   const isQuestion = relationType === 'question'
 
   return (
@@ -179,6 +184,12 @@ export default function ContextCardModal({ card, parentTask, onClose, onUpdate }
               />
             </div>
           )}
+        </div>
+
+        <div className={styles.footer}>
+          <button type="button" className={styles.doneBtn} onClick={handleDone}>
+            Done
+          </button>
         </div>
 
       </div>

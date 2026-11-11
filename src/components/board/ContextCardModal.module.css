@@ -259,3 +259,36 @@
   border-color: var(--color-border);
   box-shadow: 0 0 0 1px var(--color-border);
 }
+
+/* ── Footer ───────────────────────────────────── */
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid color-mix(in srgb, var(--color-col-context) 20%, var(--color-border));
+  background: color-mix(in srgb, var(--color-col-context) 4%, var(--color-surface));
+  flex-shrink: 0;
+}
+
+.doneBtn {
+  height: 34px;
+  padding: 0 24px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-col-context);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: filter 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.doneBtn:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--color-col-context) 40%, transparent);
+}
+.doneBtn:active {
+  filter: brightness(0.95);
+}

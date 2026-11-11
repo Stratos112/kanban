@@ -40,6 +40,18 @@
   background: color-mix(in srgb, var(--color-surface-raised) 95%, #e879f9 5%);
 }
 
+/* Unanswered question — vivid pink */
+.questionUnanswered {
+  background: color-mix(in srgb, var(--color-surface-raised) 78%, #e879f9 22%);
+  border-left-color: #e879f9;
+  box-shadow: var(--shadow-card), 0 0 0 1px color-mix(in srgb, #e879f9 28%, transparent);
+}
+
+/* Answered question collapsed to band — desaturated */
+.answeredQuestion {
+  filter: saturate(0.3) brightness(0.9);
+}
+
 .contextCard .body {
   margin-top: -2px;
 }

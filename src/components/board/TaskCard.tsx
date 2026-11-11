@@ -40,19 +40,25 @@ export default function TaskCard({
   isSelectable,
   onSelect,
 }: TaskCardProps) {
-  const isContext   = type === 'context'
-  const isQuestion  = isContext && relationType === 'question'
-  const isBand      = isContext && !isQuestion
-  const isBlocked   = blockedCount > 0
-  const isWaiting   = !isBlocked && waitingCount > 0
+  const isContext        = type === 'context'
+  const isQuestion       = isContext && relationType === 'question'
+  const isAnswered       = isQuestion && !!answer
+  const isBand           = isContext && (!isQuestion || isAnswered)
+  const isBlocked        = blockedCount > 0
+  const isWaiting        = !isBlocked && waitingCount > 0
 
-  /* ── Narrow band for details / assumption ── */
+  /* ── Narrow band for details / assumption / answered questions ── */
   if (isBand) {
     return (
-      <div className={`${styles.card} ${styles.contextCard} ${styles.contextBand}`}>
+      <div className={[
+        styles.card,
+        styles.contextCard,
+        styles.contextBand,
+        isAnswered ? styles.answeredQuestion : '',
+      ].filter(Boolean).join(' ')}>
         <div className={styles.bandRow}>
           <span className={styles.bandType}>{relationType ?? 'details'}</span>
-          <span className={styles.bandTitle}>{parentTitle || title || '—'}</span>
+          <span className={styles.bandTitle}>{isAnswered ? (question || title || '—') : (parentTitle || title || '—')}</span>
           <span className={styles.refKey}>
             KAN-{refKey}
             {parentRefKey != null && <span className={styles.parentLink}> → KAN-{parentRefKey}</span>}
@@ -68,6 +74,7 @@ export default function TaskCard({
       className={[
         styles.card,
         isContext ? styles.contextCard : '',
+        isQuestion && !isAnswered ? styles.questionUnanswered : '',
         priority ? styles[`priority_${priority}`] : '',
         isBlocked ? styles.isBlocked : isWaiting ? styles.isWaiting : '',
         isSelectable ? styles.selectable : '',

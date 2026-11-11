@@ -313,6 +313,7 @@ export default function TaskDrawer({
                 type="date"
                 className={styles.metaDate}
                 value={dueDate}
+                min={new Date().toLocaleDateString('en-CA')}
                 onChange={(e) => saveDueDate(e.target.value)}
               />
             </div>
@@ -366,6 +367,7 @@ export default function TaskDrawer({
                   title={card.title}
                   relationType={card.relationType}
                   question={card.question}
+                  answer={card.answer}
                   priority={card.priority}
                   labels={card.labels}
                   parentRefKey={task.refKey}
