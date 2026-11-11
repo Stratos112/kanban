@@ -7,7 +7,7 @@ import {
   useDroppable,
   useSensor,
   useSensors,
-  closestCorners,
+  rectIntersection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -322,7 +322,7 @@ export default function BoardPage() {
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={rectIntersection}
         onDragStart={onDragStart}
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
