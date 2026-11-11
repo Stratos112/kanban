@@ -35,9 +35,9 @@
      In Review breaks the gradient intentionally (gate).
      Context echoes Backlog grey but with a warm pink tint. */
   --color-col-backlog:     #64748b;   /* slate grey — neutral, parked  */
-  --color-col-ready:       #2b7a8c;   /* blue-grey  — moving to teal   */
-  --color-col-in-progress: #2272b6;   /* blue       — active midpoint  */
-  --color-col-in-review:   #1e3a8a;   /* dark navy  — gate (red-ringed) */
+  --color-col-ready:       #4a6ea0;   /* blue-grey  — step 1           */
+  --color-col-in-progress: #2d57a8;   /* blue       — step 2           */
+  --color-col-in-review:   #152660;   /* deep navy  — gate (red-ringed) */
   --color-col-completed:   #16a34a;   /* green      — shipped          */
   --color-col-context:     #9d6b7a;   /* rose-grey  — reference cards  */
 
