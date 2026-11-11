@@ -41,6 +41,20 @@ const INVERSE_LINK: Record<string, string> = {
   completes:  'waiting_on',
 }
 
+// Human-readable label for each link type, from both perspectives of the relationship row.
+// "from" = how it looks to the task stored as from_task_id.
+// "to"   = how it looks to the task stored as to_task_id (the inverse view).
+const LINK_DISPLAY: Record<string, { from: string; to: string }> = {
+  blocks:     { from: 'Blocks',      to: 'Blocked by' },
+  blocked_by: { from: 'Blocked by',  to: 'Blocks' },
+  parent_of:  { from: 'Parent of',   to: 'Child of' },
+  child_of:   { from: 'Child of',    to: 'Parent of' },
+  waiting_on: { from: 'Waiting on',  to: 'Completes' },
+  completes:  { from: 'Completes',   to: 'Waiting on' },
+  subtask:    { from: 'Child of',    to: 'Parent of' },   // legacy schema type
+  details:    { from: 'Details for', to: 'Has detail' },  // legacy schema type
+}
+
 export interface BoardUser {
   id: string
   displayName: string
@@ -243,13 +257,20 @@ export default function BoardPage() {
         }))
     )
 
-    // Load task relationships
-    const { data: links } = await supabase
-      .from('task_relationships')
-      .select('*')
-      .eq('board_id', id)
+    // Load task relationships — query by task IDs (table has no board_id column)
+    const boardTaskIds = rows.filter((r) => r.status !== 'context').map((r) => r.id)
+    let relRows: any[] = []
+    if (boardTaskIds.length > 0) {
+      const ids = boardTaskIds.join(',')
+      const { data: relData, error: relErr } = await supabase
+        .from('task_relationships')
+        .select('*')
+        .or(`from_task_id.in.(${ids}),to_task_id.in.(${ids})`)
+      if (relErr) console.error('Failed to load task relationships:', relErr)
+      relRows = relData ?? []
+    }
 
-    setTaskLinks((links ?? []).map((l: any) => ({
+    setTaskLinks(relRows.map((l: any) => ({
       id:           l.id,
       fromTaskId:   l.from_task_id,
       toTaskId:     l.to_task_id,
@@ -433,36 +454,27 @@ export default function BoardPage() {
     const { fromTaskId, fromRefKey, linkType, linkLabel } = linkingState
     const inverseType = INVERSE_LINK[linkType] ?? linkType
 
-    const [{ data: fwdRow, error: e1 }, { data: invRow, error: e2 }] = await Promise.all([
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
       supabase.from('task_relationships').insert({
         from_task_id: fromTaskId,
         to_task_id:   targetTask.id,
         type:         linkType,
-        board_id:     boardId,
-      }).select().single(),
+      }),
       supabase.from('task_relationships').insert({
         from_task_id: targetTask.id,
         to_task_id:   fromTaskId,
         type:         inverseType,
-        board_id:     boardId,
-      }).select().single(),
+      }),
     ])
 
     if (e1) console.error('Forward link insert error:', e1)
     if (e2) console.error('Inverse link insert error:', e2)
 
-    // Update state immediately without waiting for a full loadTasks round-trip
-    const newLinks: TaskLink[] = []
-    if (fwdRow) newLinks.push({ id: fwdRow.id, fromTaskId,         toTaskId: targetTask.id, type: linkType,     linkedTaskId: targetTask.id })
-    if (invRow) newLinks.push({ id: invRow.id, fromTaskId: targetTask.id, toTaskId: fromTaskId, type: inverseType, linkedTaskId: fromTaskId     })
-    if (newLinks.length > 0) setTaskLinks((prev) => [...prev, ...newLinks])
-
     setLinkingState(null)
     setLinkSuccess(`KAN-${fromRefKey} "${linkLabel}" ↔ KAN-${targetTask.refKey}`)
     setTimeout(() => setLinkSuccess(null), 2200)
 
-    // Reload from DB to guarantee both directions are reflected in state
-    loadTasks(boardId)
+    await loadTasks(boardId)
   }
 
   /* ── Drag handlers ─────────────────────────────────── */
@@ -562,19 +574,34 @@ export default function BoardPage() {
   const openTask      = openTaskId ? tasks.find((t) => t.id === openTaskId) ?? null : null
   const isLoading     = authLoading || loadingTasks
 
-  // Resolve task links for the open task
+  // Resolve task links for the open task — show both sides of each relationship row
   const openTaskLinks = openTask
-    ? taskLinks
-        .filter((l) => l.fromTaskId === openTask.id)
-        .map((l) => {
-          const target = tasks.find((t) => t.id === l.toTaskId)
-          return {
-            id:           l.id,
-            type:         l.type,
-            toTaskRefKey: target?.refKey ?? 0,
-            toTaskTitle:  target?.title ?? '',
-          }
-        })
+    ? [
+        // Rows where this task is the FROM: show the type from its own perspective
+        ...taskLinks
+          .filter((l) => l.fromTaskId === openTask.id)
+          .map((l) => {
+            const target = tasks.find((t) => t.id === l.toTaskId)
+            return {
+              id:           l.id,
+              type:         LINK_DISPLAY[l.type]?.from ?? l.type,
+              toTaskRefKey: target?.refKey ?? 0,
+              toTaskTitle:  target?.title ?? '',
+            }
+          }),
+        // Rows where this task is the TO: show the inverse label
+        ...taskLinks
+          .filter((l) => l.toTaskId === openTask.id)
+          .map((l) => {
+            const target = tasks.find((t) => t.id === l.fromTaskId)
+            return {
+              id:           l.id + '_r',
+              type:         LINK_DISPLAY[l.type]?.to ?? l.type,
+              toTaskRefKey: target?.refKey ?? 0,
+              toTaskTitle:  target?.title ?? '',
+            }
+          }),
+      ]
     : []
 
   return (
