@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { BoardTask, ContextCard, BoardUser } from '../../pages/BoardPage'
 import type { TaskPriority, TaskStatus } from '../../lib/database.types'
 import { supabase } from '../../lib/supabase'
+import TaskCard from './TaskCard'
 import styles from './TaskDrawer.module.css'
 
 const STATUSES: { value: Exclude<TaskStatus, 'context'>; label: string }[] = [
@@ -122,12 +123,12 @@ interface Props {
   onUpdate: (changes: Partial<BoardTask>) => void
   onDelete: (id: string) => void
   onAddContext: (question: string, relationType: string) => void
-  onUpdateContext: (id: string, changes: Partial<ContextCard>) => void
+  onOpenContext: (id: string) => void
 }
 
 export default function TaskDrawer({
   task, boardId, users, currentUserId, contextCards,
-  onClose, onUpdate, onDelete, onAddContext, onUpdateContext,
+  onClose, onUpdate, onDelete, onAddContext, onOpenContext,
 }: Props) {
   const [title, setTitle]             = useState(task.title)
   const [status, setStatus]           = useState(task.status)
@@ -222,26 +223,6 @@ export default function TaskDrawer({
         .filter((l) => newIds.includes(l.id))
         .map((l) => ({ name: l.name, color: l.color })),
     })
-  }
-
-  async function saveContextRelType(card: ContextCard, val: string) {
-    await supabase.from('tasks').update({ context_relation_type: val }).eq('id', card.id)
-    onUpdateContext(card.id, { relationType: val })
-  }
-
-  async function saveContextLinkType(card: ContextCard, val: string) {
-    await supabase.from('tasks').update({ parent_link_type: val } as any).eq('id', card.id)
-    onUpdateContext(card.id, { linkType: val })
-  }
-
-  async function saveContextPriority(card: ContextCard, val: TaskPriority) {
-    await supabase.from('tasks').update({ priority: val }).eq('id', card.id)
-    onUpdateContext(card.id, { priority: val })
-  }
-
-  async function saveContextAnswer(card: ContextCard, val: string) {
-    await supabase.from('tasks').update({ answer: val || null }).eq('id', card.id)
-    onUpdateContext(card.id, { answer: val || undefined })
   }
 
   function submitContext() {
@@ -360,14 +341,19 @@ export default function TaskDrawer({
             </div>
 
             {contextCards.map((card) => (
-              <ContextCardRow
-                key={card.id}
-                card={card}
-                onRelTypeChange={(v) => saveContextRelType(card, v)}
-                onLinkTypeChange={(v) => saveContextLinkType(card, v)}
-                onPriorityChange={(v) => saveContextPriority(card, v)}
-                onAnswerChange={(v) => saveContextAnswer(card, v)}
-              />
+              <div key={card.id} className={styles.contextCardLink} onClick={() => onOpenContext(card.id)}>
+                <TaskCard
+                  refKey={card.refKey}
+                  type="context"
+                  title={card.title}
+                  relationType={card.relationType}
+                  question={card.question}
+                  priority={card.priority}
+                  labels={card.labels}
+                  parentRefKey={task.refKey}
+                  parentTitle={task.title}
+                />
+              </div>
             ))}
 
             {addingContext && (
@@ -428,81 +414,3 @@ export default function TaskDrawer({
   )
 }
 
-/* ── Context card row ────────────────────────────────── */
-function ContextCardRow({
-  card,
-  onRelTypeChange,
-  onLinkTypeChange,
-  onPriorityChange,
-  onAnswerChange,
-}: {
-  card: ContextCard
-  onRelTypeChange: (v: string) => void
-  onLinkTypeChange: (v: string) => void
-  onPriorityChange: (v: TaskPriority) => void
-  onAnswerChange: (v: string) => void
-}) {
-  const [answer, setAnswer] = useState(card.answer ?? '')
-
-  useEffect(() => { setAnswer(card.answer ?? '') }, [card.id])
-
-  return (
-    <div className={styles.contextCard}>
-      <div className={styles.contextCardTop}>
-        <select
-          className={styles.contextTypeSelect}
-          value={card.relationType}
-          onChange={(e) => onRelTypeChange(e.target.value)}
-        >
-          {RELATION_TYPES.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
-          ))}
-        </select>
-        <p className={styles.contextQuestion}>{card.question || <em style={{ opacity: 0.5 }}>No description</em>}</p>
-      </div>
-      <div className={styles.contextCardMeta}>
-        {card.relationType === 'question' && (
-          <select
-            className={styles.contextMetaSelect}
-            value={card.linkType ?? 'blocking'}
-            onChange={(e) => onLinkTypeChange(e.target.value)}
-          >
-            {LINK_TYPES.map((l) => (
-              <option key={l.value} value={l.value}>{l.label}</option>
-            ))}
-          </select>
-        )}
-        <select
-          className={styles.contextMetaSelect}
-          value={card.priority}
-          onChange={(e) => onPriorityChange(e.target.value as TaskPriority)}
-        >
-          {PRIORITIES.map((p) => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
-        </select>
-        {card.labels.length > 0 && (
-          <div className={styles.contextCardLabels}>
-            {card.labels.map((l) => (
-              <span
-                key={l.name}
-                className={styles.labelChip}
-                style={{ '--label-color': l.color } as React.CSSProperties}
-              >
-                {l.name}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-      <textarea
-        className={styles.contextAnswer}
-        placeholder="Add an answer…"
-        value={answer}
-        rows={2}
-        onChange={(e) => setAnswer(e.target.value)}
-        onBlur={() => onAnswerChange(answer)}
-      />
-    </div>
-  )
-}

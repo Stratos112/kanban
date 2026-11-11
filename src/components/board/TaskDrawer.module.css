@@ -231,7 +231,14 @@
   opacity: 0.6;
 }
 
-/* Individual context card */
+.contextCardLink {
+  cursor: pointer;
+}
+.contextCardLink:hover > * {
+  box-shadow: var(--shadow-md), 0 0 0 1px color-mix(in srgb, var(--color-col-context) 40%, var(--color-border));
+}
+
+/* Individual context card (legacy — kept for add-context form) */
 .contextCard {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);

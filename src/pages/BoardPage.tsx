@@ -17,6 +17,7 @@ import TaskCard from '../components/board/TaskCard'
 import SortableTaskCard from '../components/board/SortableTaskCard'
 import TaskDrawer from '../components/board/TaskDrawer'
 import NewTaskModal, { type NewTaskPayload } from '../components/board/NewTaskModal'
+import ContextCardModal from '../components/board/ContextCardModal'
 import { useAuth } from '../lib/AuthContext'
 import { getBoardBySlug } from '../lib/boards'
 import { supabase } from '../lib/supabase'
@@ -97,6 +98,7 @@ export default function BoardPage() {
   const [loadingTasks, setLoadingTasks]   = useState(true)
   const [activeId, setActiveId]           = useState<string | null>(null)
   const [openTaskId, setOpenTaskId]       = useState<string | null>(null)
+  const [openContextId, setOpenContextId] = useState<string | null>(null)
   const tasksSnapshot                     = useRef<BoardTask[]>([])
 
   const sensors = useSensors(
@@ -559,18 +561,19 @@ export default function BoardPage() {
                   : contextCards.map((c) => {
                       const parent = tasks.find((t) => t.id === c.parentTaskId)
                       return (
-                        <TaskCard
-                          key={c.id}
-                          refKey={c.refKey}
-                          type="context"
-                          title={c.title}
-                          relationType={c.relationType}
-                          question={c.question}
-                          answer={c.answer}
-                          priority={c.priority}
-                          parentRefKey={parent?.refKey}
-                          parentTitle={parent?.title}
-                        />
+                        <div key={c.id} onClick={() => setOpenContextId(c.id)} style={{ cursor: 'pointer' }}>
+                          <TaskCard
+                            refKey={c.refKey}
+                            type="context"
+                            title={c.title}
+                            relationType={c.relationType}
+                            question={c.question}
+                            answer={c.answer}
+                            priority={c.priority}
+                            parentRefKey={parent?.refKey}
+                            parentTitle={parent?.title}
+                          />
+                        </div>
                       )
                     })
               }
@@ -605,6 +608,19 @@ export default function BoardPage() {
         />
       )}
 
+      {openContextId && (() => {
+        const ctxCard = contextCards.find((c) => c.id === openContextId)
+        const ctxParent = ctxCard ? tasks.find((t) => t.id === ctxCard.parentTaskId) : undefined
+        return ctxCard ? (
+          <ContextCardModal
+            card={ctxCard}
+            parentTask={ctxParent}
+            onClose={() => setOpenContextId(null)}
+            onUpdate={handleContextUpdate}
+          />
+        ) : null
+      })()}
+
       {openTask && boardId && (
         <TaskDrawer
           task={openTask}
@@ -616,7 +632,7 @@ export default function BoardPage() {
           onUpdate={(changes) => handleTaskUpdate(openTask.id, changes)}
           onDelete={handleTaskDelete}
           onAddContext={(q, rt) => handleAddContext(openTask.id, q, rt)}
-          onUpdateContext={handleContextUpdate}
+          onOpenContext={setOpenContextId}
         />
       )}
     </div>
