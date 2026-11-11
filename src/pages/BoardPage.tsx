@@ -61,7 +61,7 @@ export default function BoardPage() {
           const tasks = tasksInColumn(col.key)
           const css = { '--col-accent': col.accent } as React.CSSProperties
           return (
-            <section key={col.key} className={styles.column} style={css}>
+            <section key={col.key} className={`${styles.column}${col.key === 'in_review' ? ` ${styles.inReviewColumn}` : ''}`} style={css}>
               <div className={styles.columnHeader} style={css}>
                 <span className={styles.columnLabel}>{col.label}</span>
                 <span className={styles.columnCount}>{tasks.length}</span>
