@@ -158,6 +158,7 @@ export default function TaskDrawer({
   const [assigneeId, setAssigneeId]        = useState(task.assignee?.id ?? '')
   const [confirmDelete, setConfirmDelete]  = useState(false)
   const [selectedLinkType, setSelectedLinkType] = useState<string>('')
+  const [expandedCtxId, setExpandedCtxId] = useState<string | null>(null)
   const titleRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -168,6 +169,7 @@ export default function TaskDrawer({
     setAssigneeId(task.assignee?.id ?? '')
     setAddingContext(false)
     setSelectedLinkType('')
+    setExpandedCtxId(null)
   }, [task.id])
 
   useEffect(() => {
@@ -359,22 +361,50 @@ export default function TaskDrawer({
               )}
             </div>
 
-            {contextCards.map((card) => (
-              <div key={card.id} className={styles.contextCardLink} onClick={() => onOpenContext(card.id)}>
-                <TaskCard
-                  refKey={card.refKey}
-                  type="context"
-                  title={card.title}
-                  relationType={card.relationType}
-                  question={card.question}
-                  answer={card.answer}
-                  priority={card.priority}
-                  labels={card.labels}
-                  parentRefKey={task.refKey}
-                  parentTitle={task.title}
-                />
-              </div>
-            ))}
+            {contextCards.map((card) => {
+              const isExpanded = expandedCtxId === card.id
+              return (
+                <div key={card.id}>
+                  <div className={styles.contextCardRow}>
+                    <div className={styles.contextCardLink} onClick={() => onOpenContext(card.id)}>
+                      <TaskCard
+                        refKey={card.refKey}
+                        type="context"
+                        title={card.title}
+                        relationType={card.relationType}
+                        question={card.question}
+                        answer={card.answer}
+                        priority={card.priority}
+                        labels={card.labels}
+                        parentRefKey={task.refKey}
+                        parentTitle={task.title}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className={`${styles.expandBtn} ${isExpanded ? styles.expandBtnOpen : ''}`}
+                      onClick={() => setExpandedCtxId(isExpanded ? null : card.id)}
+                      aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
+                  </div>
+                  {isExpanded && (
+                    <div className={styles.contextExpandedBody}>
+                      {card.question && <p className={styles.expandedText}>{card.question}</p>}
+                      {card.relationType === 'question' && card.answer && (
+                        <>
+                          <div className={styles.expandedAnswerLabel}>Answer</div>
+                          <p className={styles.expandedAnswer}>{card.answer}</p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
 
             {addingContext && (
               <div className={styles.addContextForm}>

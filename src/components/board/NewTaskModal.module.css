@@ -9,10 +9,10 @@
   z-index: 100;
 }
 
-/* ── Modal row: modal + context panel side by side ── */
 .modalRow {
   display: flex;
   align-items: flex-start;
+  gap: 12px;
 }
 
 .modal {
@@ -291,45 +291,149 @@
   border-color: rgba(99, 130, 180, 0.5);
 }
 
-/* ── Panels column (always visible, to the right of modal) ── */
+/* ── Compact context list (inside form body) ──────── */
+.contextSection {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.contextSectionLabel {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 2px;
+}
+
+.contextRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 8px 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  outline: none;
+  user-select: none;
+}
+
+.contextRow:hover {
+  border-color: color-mix(in srgb, var(--color-col-context) 35%, var(--color-border));
+  background: var(--color-surface-hover);
+}
+
+.contextRowActive {
+  border-color: color-mix(in srgb, var(--color-col-context) 50%, var(--color-border));
+  background: color-mix(in srgb, var(--color-col-context) 6%, var(--color-surface-raised));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-col-context) 20%, transparent);
+}
+
+.contextRowType {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-col-context);
+  background: color-mix(in srgb, var(--color-col-context) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 28%, transparent);
+  border-radius: 999px;
+  padding: 2px 7px;
+  flex-shrink: 0;
+}
+
+.contextRowLink {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px 7px;
+  flex-shrink: 0;
+}
+
+.contextRowText {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.contextRowEmpty {
+  color: var(--color-text-subtle);
+  font-style: italic;
+  font-size: 11px;
+}
+
+.contextRowRemove {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-subtle);
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+
+.contextRowRemove:hover {
+  color: var(--color-text-muted);
+  background: var(--color-surface-hover);
+}
+
+.addContextBtn {
+  align-self: flex-start;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-subtle);
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--radius-md);
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.addContextBtn:hover {
+  color: var(--color-col-context);
+  border-color: color-mix(in srgb, var(--color-col-context) 40%, transparent);
+}
+
+/* ── Side panels column ───────────────────────────── */
 .panelsColumn {
-  width: 340px;
-  margin-left: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   flex-shrink: 0;
+  width: 320px;
 }
 
-.addPanelBtn {
-  font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-col-context);
-  background: color-mix(in srgb, var(--color-col-context) 8%, transparent);
-  border: 1px dashed color-mix(in srgb, var(--color-col-context) 35%, transparent);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  cursor: pointer;
-  text-align: center;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.addPanelBtn:hover {
-  background: color-mix(in srgb, var(--color-col-context) 14%, transparent);
-  border-color: color-mix(in srgb, var(--color-col-context) 55%, transparent);
-}
-
-/* ── Individual context panel ────────────────────── */
 .contextPanel {
-  width: 340px;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in srgb, var(--color-col-context) 30%, var(--color-border));
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 28%, var(--color-border));
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.55),
-    0 32px 64px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 0 transparent;
+    0 32px 64px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -339,38 +443,57 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  height: 52px;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-col-context) 20%, var(--color-border));
-  background: color-mix(in srgb, var(--color-col-context) 7%, var(--color-surface));
+  padding: 0 12px 0 14px;
+  height: 44px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-col-context) 18%, var(--color-border));
+  background: color-mix(in srgb, var(--color-col-context) 6%, var(--color-surface));
   flex-shrink: 0;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  gap: 8px;
 }
 
-.contextPanelTitle {
-  font-family: var(--font-sans);
+.contextPanelControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.contextPanelClose {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--color-col-context);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+
+.contextPanelClose:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
 }
 
 .contextPanelBody {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 18px 16px;
+  padding: 14px;
   flex: 1;
 }
 
 .contextRelSelect {
-  height: 30px;
-  padding: 0 28px 0 10px;
+  height: 28px;
+  padding: 0 24px 0 10px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--color-col-context) 30%, var(--color-border));
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 32%, var(--color-border));
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23e879f9' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center / 10px,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%23e879f9' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center / 9px,
     color-mix(in srgb, var(--color-col-context) 10%, var(--color-surface-raised));
   color: var(--color-col-context);
   font-family: var(--font-sans);
@@ -381,12 +504,13 @@
   outline: none;
   cursor: pointer;
   appearance: none;
-  align-self: flex-start;
+  flex-shrink: 0;
+  transition: border-color 0.15s;
 }
 
 .contextRelSelect:focus {
   border-color: color-mix(in srgb, var(--color-col-context) 60%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-col-context) 15%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-col-context) 14%, transparent);
 }
 
 .contextRelSelect option {
@@ -396,44 +520,34 @@
   font-size: 12px;
 }
 
-.contextPanelMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
 .contextLinkSelect {
-  height: 30px;
-  padding: 0 24px 0 10px;
+  height: 28px;
+  padding: 0 22px 0 9px;
   border-radius: 999px;
   border: 1px solid var(--color-border);
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23768390' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center / 10px,
-    color-mix(in srgb, var(--color-surface-raised) 80%, transparent);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%23768390' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center / 9px,
+    var(--color-surface-raised);
   color: var(--color-text-muted);
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.03em;
   outline: none;
   cursor: pointer;
   appearance: none;
   flex-shrink: 0;
-  transition: border-color 0.15s, background-color 0.15s;
+  transition: border-color 0.15s;
 }
+
 .contextLinkSelect:focus {
   border-color: color-mix(in srgb, var(--color-col-context) 40%, transparent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-col-context) 10%, transparent);
 }
+
 .contextLinkSelect option {
   background: var(--color-surface-raised);
   color: var(--color-text);
-}
-
-.contextPanelLabelWrap {
-  flex: 1;
-  min-width: 100px;
 }
 
 .contextTextarea {
@@ -447,7 +561,7 @@
   padding: 10px 12px;
   outline: none;
   line-height: 1.55;
-  min-height: 120px;
+  min-height: 110px;
   flex: 1;
   transition: border-color 0.15s, box-shadow 0.15s;
 }

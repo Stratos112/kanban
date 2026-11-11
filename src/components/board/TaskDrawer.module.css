@@ -231,11 +231,81 @@
   opacity: 0.6;
 }
 
+.contextCardRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
 .contextCardLink {
+  flex: 1;
+  min-width: 0;
   cursor: pointer;
 }
 .contextCardLink:hover > * {
   box-shadow: var(--shadow-md), 0 0 0 1px color-mix(in srgb, var(--color-col-context) 40%, var(--color-border));
+}
+
+.expandBtn {
+  flex-shrink: 0;
+  margin-top: 4px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+.expandBtn:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-subtle);
+}
+.expandBtn svg {
+  transition: transform 0.18s;
+}
+.expandBtnOpen svg {
+  transform: rotate(180deg);
+}
+
+.contextExpandedBody {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 20%, var(--color-border));
+  background: color-mix(in srgb, var(--color-col-context) 5%, var(--color-surface));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.expandedText {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.expandedAnswerLabel {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.expandedAnswer {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0;
 }
 
 /* Individual context card (legacy — kept for add-context form) */
@@ -555,15 +625,19 @@
 .deleteBtn {
   font-family: var(--font-sans);
   font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-subtle);
+  font-weight: 600;
+  color: var(--color-danger);
   background: transparent;
-  border: none;
-  padding: 4px 0;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 38%, var(--color-border));
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: color 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
-.deleteBtn:hover { color: var(--color-danger); }
+.deleteBtn:hover {
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  border-color: var(--color-danger);
+}
 
 .deleteConfirm {
   display: flex;
