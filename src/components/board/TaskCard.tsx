@@ -78,7 +78,8 @@ export default function TaskCard({
           <>
             {title && <p className={styles.contextTitle}>{title}</p>}
             {question && <p className={styles.question}>{question}</p>}
-            {!question && <span className={styles.unanswered}>Unanswered</span>}
+            {isQuestion && answer && <p className={styles.answer}>{answer}</p>}
+            {isQuestion && !answer && <span className={styles.unanswered}>Unanswered</span>}
           </>
         ) : (
           <p className={styles.title}>{title}</p>
