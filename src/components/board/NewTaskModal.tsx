@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { TaskPriority, TaskStatus } from '../../lib/database.types'
+import { PRESET_LABELS } from '../../lib/labels'
 import styles from './NewTaskModal.module.css'
 
 export interface NewTaskPayload {
@@ -27,11 +28,6 @@ const PRIORITIES: { value: TaskPriority; label: string }[] = [
   { value: 'low',    label: 'Low' },
   { value: 'normal', label: 'Normal' },
   { value: 'high',   label: 'High' },
-]
-
-const PRESET_LABELS = [
-  'Backend', 'Frontend', 'Design', 'Feature',
-  'Bug', 'Testing', 'DevOps', 'Scope', 'Docs',
 ]
 
 /* ── Label multi-select ──────────────────────────────── */

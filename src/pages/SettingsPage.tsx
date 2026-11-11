@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { getBoardBySlug } from '../lib/boards'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
+import { PRESET_LABELS, DEFAULT_LABEL_COLOR } from '../lib/labels'
 import type { Label } from '../lib/database.types'
 import styles from './SettingsPage.module.css'
 
@@ -45,13 +46,29 @@ export default function SettingsPage() {
   const [addColor, setAddColor]     = useState(PALETTE[1])
 
   useEffect(() => {
-    if (!slug) return
-    getBoardBySlug(slug).then((board) => {
+    if (!slug || !userId) return
+    getBoardBySlug(slug).then(async (board) => {
       if (!board) return
       setBoardId(board.id)
+      await seedPresetLabels(board.id)
       loadLabels(board.id)
     })
-  }, [slug])
+  }, [slug, userId])
+
+  async function seedPresetLabels(id: string) {
+    const { data: existing } = await supabase
+      .from('labels')
+      .select('name')
+      .eq('board_id', id)
+
+    const existingNames = new Set((existing ?? []).map((l) => l.name))
+    const missing = PRESET_LABELS.filter((name) => !existingNames.has(name))
+    if (missing.length === 0 || !userId) return
+
+    await supabase.from('labels').insert(
+      missing.map((name) => ({ user_id: userId, board_id: id, name, color: DEFAULT_LABEL_COLOR }))
+    )
+  }
 
   async function loadLabels(id: string) {
     const { data } = await supabase
