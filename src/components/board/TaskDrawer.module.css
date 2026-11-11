@@ -404,6 +404,148 @@
 .submitContextBtn:hover:not(:disabled) { filter: brightness(1.1); }
 .submitContextBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── Linked tasks section ────────────────────────────── */
+.linkedSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.linkedSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionTitle {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.linkedEmpty {
+  font-size: 12px;
+  color: var(--color-text-subtle);
+  margin: 0;
+  opacity: 0.6;
+}
+
+.linkedList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.linkedItem {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+}
+
+.linkedType {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-col-context);
+  background: color-mix(in srgb, var(--color-col-context) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 28%, transparent);
+  border-radius: 999px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.linkedTarget {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-subtle);
+}
+
+.linkedTitle {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ── Connect section ─────────────────────────────────── */
+.connectSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface-raised) 50%, transparent);
+  border: 1px solid var(--color-border);
+}
+
+.linkTypeGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.linkTypeBtn {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+
+.linkTypeBtn:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+  border-color: var(--color-text-subtle);
+}
+
+.linkTypeBtnActive {
+  color: var(--color-col-context);
+  background: color-mix(in srgb, var(--color-col-context) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-col-context) 40%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-col-context) 20%, transparent);
+}
+
+.linkTypeBtnActive:hover {
+  color: var(--color-col-context);
+  background: color-mix(in srgb, var(--color-col-context) 18%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-col-context) 55%, transparent);
+}
+
+.selectTaskBtn {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-col-context);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 7px 14px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: filter 0.15s;
+}
+
+.selectTaskBtn:hover {
+  filter: brightness(1.1);
+}
+
 /* ── Delete zone ─────────────────────────────────────── */
 .deleteZone {
   padding-top: 8px;

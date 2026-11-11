@@ -15,6 +15,10 @@ export interface TaskCardProps {
   assigneeName?: string | null
   parentRefKey?: number
   parentTitle?: string
+  blockedCount?: number
+  waitingCount?: number
+  isSelectable?: boolean
+  onSelect?: () => void
 }
 
 export default function TaskCard({
@@ -31,10 +35,16 @@ export default function TaskCard({
   assigneeName,
   parentRefKey,
   parentTitle,
+  blockedCount = 0,
+  waitingCount = 0,
+  isSelectable,
+  onSelect,
 }: TaskCardProps) {
   const isContext   = type === 'context'
   const isQuestion  = isContext && relationType === 'question'
   const isBand      = isContext && !isQuestion
+  const isBlocked   = blockedCount > 0
+  const isWaiting   = !isBlocked && waitingCount > 0
 
   /* ── Narrow band for details / assumption ── */
   if (isBand) {
@@ -55,7 +65,14 @@ export default function TaskCard({
   /* ── Full card for tasks and questions ── */
   return (
     <div
-      className={`${styles.card} ${isContext ? styles.contextCard : ''} ${priority ? styles[`priority_${priority}`] : ''}`}
+      className={[
+        styles.card,
+        isContext ? styles.contextCard : '',
+        priority ? styles[`priority_${priority}`] : '',
+        isBlocked ? styles.isBlocked : isWaiting ? styles.isWaiting : '',
+        isSelectable ? styles.selectable : '',
+      ].filter(Boolean).join(' ')}
+      onClick={isSelectable ? onSelect : undefined}
     >
       <div className={styles.header}>
         <span className={styles.refKey}>
@@ -97,6 +114,16 @@ export default function TaskCard({
               {l.name}
             </span>
           ))}
+          {blockedCount > 0 && (
+            <span className={`${styles.statusChip} ${styles.blockerChip}`}>
+              {blockedCount} blocker{blockedCount > 1 ? 's' : ''}
+            </span>
+          )}
+          {waitingCount > 0 && (
+            <span className={`${styles.statusChip} ${styles.waitingChip}`}>
+              waiting on {waitingCount}
+            </span>
+          )}
         </div>
         <div className={styles.meta}>
           {dueDate && (

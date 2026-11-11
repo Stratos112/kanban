@@ -5,6 +5,14 @@ import styles from './NewTaskModal.module.css'
 
 interface UserOption { id: string; displayName: string; avatarColor: string }
 
+export interface ContextPanelData {
+  text: string
+  relationType: string
+  linkType: string
+  priority: TaskPriority
+  labels: string[]
+}
+
 export interface NewTaskPayload {
   title: string
   status: Exclude<TaskStatus, 'context'>
@@ -12,13 +20,7 @@ export interface NewTaskPayload {
   dueDate: string
   assigneeId: string
   labels: { name: string }[]
-  context: {
-    text: string
-    relationType: string
-    linkType: string
-    priority: TaskPriority
-    labels: string[]
-  }
+  contexts: ContextPanelData[]
 }
 
 const CONTEXT_TYPES = [
@@ -134,55 +136,157 @@ function LabelPicker({ selected, onChange }: LabelPickerProps) {
   )
 }
 
-/* ── Modal ───────────────────────────────────────────── */
-export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }: Props) {
-  const [title, setTitle]                 = useState('')
-  const [status, setStatus]               = useState<Exclude<TaskStatus, 'context'>>('backlog')
-  const [priority, setPriority]           = useState<TaskPriority>('normal')
-  const [dueDate, setDueDate]             = useState('')
-  const [assigneeId, setAssigneeId]       = useState(currentUserId)
-  const [labels, setLabels]               = useState<string[]>([])
-  const [contextOpen, setContextOpen]         = useState(false)
-  const [contextText, setContextText]         = useState('')
-  const [contextRelType, setContextRelType]   = useState('details')
-  const [contextLinkType, setContextLinkType] = useState('blocking')
-  const [contextPriority, setContextPriority] = useState<TaskPriority>('normal')
-  const [contextLabels, setContextLabels]     = useState<string[]>([])
-  const contextTextareaRef    = useRef<HTMLTextAreaElement>(null)
-  const contextLabelsTouched  = useRef(false)
+/* ── Single context panel ────────────────────────────── */
+interface PanelState {
+  id: number
+  text: string
+  relationType: string
+  linkType: string
+  priority: TaskPriority
+  labels: string[]
+  labelsManuallySet: boolean
+}
 
+interface ContextPanelProps {
+  panel: PanelState
+  canClose: boolean
+  taskLabels: string[]
+  onChange: (id: number, changes: Partial<PanelState>) => void
+  onClose: (id: number) => void
+}
+
+function ContextPanel({ panel, canClose, taskLabels, onChange, onClose }: ContextPanelProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Sync task labels when not manually set
   useEffect(() => {
-    if (!contextLabelsTouched.current) setContextLabels(labels)
-  }, [labels])
+    if (!panel.labelsManuallySet) {
+      onChange(panel.id, { labels: taskLabels })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskLabels])
 
-  function handleContextLabelsChange(next: string[]) {
-    contextLabelsTouched.current = true
-    setContextLabels(next)
+  function handleContextTypeChange(type: string) {
+    onChange(panel.id, { relationType: type })
+    if (type === 'question') onChange(panel.id, { linkType: 'blocking' })
   }
+
+  function handleLabelsChange(next: string[]) {
+    onChange(panel.id, { labels: next, labelsManuallySet: true })
+  }
+
+  return (
+    <div className={styles.contextPanel} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.contextPanelHeader}>
+        <span className={styles.contextPanelTitle}>Context</span>
+        {canClose && (
+          <button
+            type="button"
+            className={styles.closeBtn}
+            onClick={() => onClose(panel.id)}
+            aria-label="Close context panel"
+          >✕</button>
+        )}
+      </div>
+      <div className={styles.contextPanelBody}>
+        <div className={styles.contextPanelMeta}>
+          <select
+            className={styles.contextRelSelect}
+            value={panel.relationType}
+            onChange={(e) => handleContextTypeChange(e.target.value)}
+          >
+            {CONTEXT_TYPES.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+          {panel.relationType === 'question' && (
+            <select
+              className={styles.contextLinkSelect}
+              value={panel.linkType}
+              onChange={(e) => onChange(panel.id, { linkType: e.target.value })}
+            >
+              {LINK_TYPES.map((l) => (
+                <option key={l.value} value={l.value}>{l.label}</option>
+              ))}
+            </select>
+          )}
+          <select
+            className={styles.contextLinkSelect}
+            value={panel.priority}
+            onChange={(e) => onChange(panel.id, { priority: e.target.value as TaskPriority })}
+          >
+            {PRIORITIES.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+          <div className={styles.contextPanelLabelWrap}>
+            <LabelPicker selected={panel.labels} onChange={handleLabelsChange} />
+          </div>
+        </div>
+        <textarea
+          ref={textareaRef}
+          className={styles.contextTextarea}
+          placeholder={CONTEXT_PLACEHOLDERS[panel.relationType] ?? 'Add context…'}
+          value={panel.text}
+          onChange={(e) => onChange(panel.id, { text: e.target.value })}
+          rows={5}
+        />
+      </div>
+    </div>
+  )
+}
+
+/* ── Modal ───────────────────────────────────────────── */
+let _nextPanelId = 1
+function nextId() { return _nextPanelId++ }
+
+function makePanel(labels: string[] = []): PanelState {
+  return {
+    id: nextId(),
+    text: '',
+    relationType: 'details',
+    linkType: 'blocking',
+    priority: 'normal',
+    labels,
+    labelsManuallySet: false,
+  }
+}
+
+export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }: Props) {
+  const [title, setTitle]           = useState('')
+  const [status, setStatus]         = useState<Exclude<TaskStatus, 'context'>>('backlog')
+  const [priority, setPriority]     = useState<TaskPriority>('normal')
+  const [dueDate, setDueDate]       = useState('')
+  const [assigneeId, setAssigneeId] = useState(currentUserId)
+  const [labels, setLabels]         = useState<string[]>([])
+  const [panels, setPanels]         = useState<PanelState[]>(() => [makePanel()])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (contextOpen) setContextOpen(false)
-        else onClose()
-      }
+      if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, contextOpen])
+  }, [onClose])
 
-  function togglePanel() {
-    if (contextOpen) {
-      setContextOpen(false)
-    } else {
-      setContextOpen(true)
-      setTimeout(() => contextTextareaRef.current?.focus(), 50)
-    }
+  function handlePanelChange(id: number, changes: Partial<PanelState>) {
+    setPanels((prev) => prev.map((p) => p.id === id ? { ...p, ...changes } : p))
   }
 
-  function handleContextTypeChange(type: string) {
-    setContextRelType(type)
-    if (type === 'question') setContextLinkType('blocking')
+  function handlePanelClose(id: number) {
+    setPanels((prev) => {
+      if (prev.length <= 1) return prev
+      return prev.filter((p) => p.id !== id)
+    })
+  }
+
+  function handleAddPanel() {
+    setPanels((prev) => {
+      const next = [...prev, makePanel(labels)]
+      // If adding a 4th, drop the oldest (index 0)
+      if (next.length > 3) return next.slice(1)
+      return next
+    })
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -195,17 +299,15 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
       dueDate,
       assigneeId,
       labels: labels.map((name) => ({ name })),
-      context: {
-        text:         contextText,
-        relationType: contextRelType,
-        linkType:     contextLinkType,
-        priority:     contextPriority,
-        labels:       contextLabels,
-      },
+      contexts: panels.map((p) => ({
+        text:         p.text,
+        relationType: p.relationType,
+        linkType:     p.linkType,
+        priority:     p.priority,
+        labels:       p.labels,
+      })),
     })
   }
-
-  const relTypeLabel = CONTEXT_TYPES.find((r) => r.value === contextRelType)?.label ?? 'Details'
 
   return (
     <div className={styles.backdrop} onClick={onClose}>
@@ -296,35 +398,6 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
                   ))}
                 </select>
               </label>
-
-              {/* Context seed — always present, click to toggle panel */}
-              <div
-                className={`${styles.contextSeed} ${contextOpen ? styles.contextSeedActive : ''}`}
-                onClick={togglePanel}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePanel() }
-                }}
-              >
-                <span className={styles.contextSeedBadge}>{relTypeLabel}</span>
-                <span className={`${styles.contextSeedText} ${contextText ? styles.contextSeedTextFilled : ''}`}>
-                  {contextText || 'Add context…'}
-                </span>
-                <svg
-                  className={styles.contextSeedArrow}
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </div>
             </div>
 
             <div className={styles.actions}>
@@ -336,66 +409,25 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
           </form>
         </div>
 
-        {/* ── Context panel (slides in to the right) ── */}
-        <div
-          className={`${styles.contextPanelWrap} ${contextOpen ? styles.contextPanelWrapOpen : ''}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className={styles.contextPanel}>
-            <div className={styles.contextPanelHeader}>
-              <span className={styles.contextPanelTitle}>Context</span>
-              <button
-                type="button"
-                className={styles.closeBtn}
-                onClick={() => setContextOpen(false)}
-                aria-label="Close context panel"
-              >✕</button>
-            </div>
-            <div className={styles.contextPanelBody}>
-              <div className={styles.contextPanelMeta}>
-                <select
-                  className={styles.contextRelSelect}
-                  value={contextRelType}
-                  onChange={(e) => handleContextTypeChange(e.target.value)}
-                >
-                  {CONTEXT_TYPES.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </select>
-                {contextRelType === 'question' && (
-                  <select
-                    className={styles.contextLinkSelect}
-                    value={contextLinkType}
-                    onChange={(e) => setContextLinkType(e.target.value)}
-                  >
-                    {LINK_TYPES.map((l) => (
-                      <option key={l.value} value={l.value}>{l.label}</option>
-                    ))}
-                  </select>
-                )}
-                <select
-                  className={styles.contextLinkSelect}
-                  value={contextPriority}
-                  onChange={(e) => setContextPriority(e.target.value as TaskPriority)}
-                >
-                  {PRIORITIES.map((p) => (
-                    <option key={p.value} value={p.value}>{p.label}</option>
-                  ))}
-                </select>
-                <div className={styles.contextPanelLabelWrap}>
-                  <LabelPicker selected={contextLabels} onChange={handleContextLabelsChange} />
-                </div>
-              </div>
-              <textarea
-                ref={contextTextareaRef}
-                className={styles.contextTextarea}
-                placeholder={CONTEXT_PLACEHOLDERS[contextRelType] ?? 'Add context…'}
-                value={contextText}
-                onChange={(e) => setContextText(e.target.value)}
-                rows={5}
-              />
-            </div>
-          </div>
+        {/* ── Context panels column ── */}
+        <div className={styles.panelsColumn} onClick={(e) => e.stopPropagation()}>
+          {panels.map((panel) => (
+            <ContextPanel
+              key={panel.id}
+              panel={panel}
+              canClose={panels.length >= 2}
+              taskLabels={labels}
+              onChange={handlePanelChange}
+              onClose={handlePanelClose}
+            />
+          ))}
+          <button
+            type="button"
+            className={styles.addPanelBtn}
+            onClick={handleAddPanel}
+          >
+            + Provide more context
+          </button>
         </div>
 
       </div>

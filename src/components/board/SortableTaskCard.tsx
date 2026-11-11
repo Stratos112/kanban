@@ -6,9 +6,11 @@ import TaskCard, { type TaskCardProps } from './TaskCard'
 interface Props extends TaskCardProps {
   id: string
   onOpen?: () => void
+  isSelectable?: boolean
+  onSelect?: () => void
 }
 
-export default function SortableTaskCard({ id, onOpen, ...props }: Props) {
+export default function SortableTaskCard({ id, onOpen, isSelectable, onSelect, ...props }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const didDrag = useRef(false)
 
@@ -17,6 +19,10 @@ export default function SortableTaskCard({ id, onOpen, ...props }: Props) {
   }, [isDragging])
 
   function handleClick() {
+    if (isSelectable) {
+      onSelect?.()
+      return
+    }
     if (didDrag.current) { didDrag.current = false; return }
     onOpen?.()
   }
@@ -28,13 +34,13 @@ export default function SortableTaskCard({ id, onOpen, ...props }: Props) {
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.25 : 1,
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isDragging ? 'grabbing' : isSelectable ? 'crosshair' : 'grab',
       }}
       onClick={handleClick}
       {...attributes}
       {...listeners}
     >
-      <TaskCard {...props} />
+      <TaskCard {...props} isSelectable={isSelectable} onSelect={onSelect} />
     </div>
   )
 }

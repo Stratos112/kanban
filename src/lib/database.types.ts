@@ -1,7 +1,7 @@
 export type TaskType = 'task' | 'context'
 export type TaskStatus = 'backlog' | 'ready' | 'in_progress' | 'in_review' | 'completed' | 'context'
 export type TaskPriority = 'low' | 'normal' | 'high'
-export type RelationshipType = 'blocked_by' | 'waiting_on' | 'subtask' | 'details'
+export type RelationshipType = 'blocks' | 'blocked_by' | 'parent_of' | 'child_of' | 'waiting_on' | 'completes'
 
 export interface Database {
   public: {
@@ -139,6 +139,7 @@ export interface Database {
           from_task_id: string
           to_task_id: string
           type: RelationshipType
+          board_id: string
           created_at: string
         }
         Insert: {
@@ -146,6 +147,7 @@ export interface Database {
           from_task_id: string
           to_task_id: string
           type: RelationshipType
+          board_id: string
           created_at?: string
         }
         Update: Record<string, never>

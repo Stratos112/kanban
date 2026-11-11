@@ -291,89 +291,38 @@
   border-color: rgba(99, 130, 180, 0.5);
 }
 
-/* ── Context seed block ─────────────────────────── */
-.contextSeed {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-col-context) 8%, var(--color-surface-raised));
-  border: 1px solid color-mix(in srgb, var(--color-col-context) 20%, var(--color-border));
-  border-left: 3px solid color-mix(in srgb, var(--color-col-context) 50%, transparent);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-  user-select: none;
-}
-
-.contextSeed:hover {
-  background: color-mix(in srgb, var(--color-col-context) 13%, var(--color-surface-raised));
-  border-color: color-mix(in srgb, var(--color-col-context) 35%, var(--color-border));
-  border-left-color: color-mix(in srgb, var(--color-col-context) 75%, transparent);
-}
-
-.contextSeedActive {
-  background: color-mix(in srgb, var(--color-col-context) 13%, var(--color-surface-raised));
-  border-color: color-mix(in srgb, var(--color-col-context) 35%, var(--color-border));
-  border-left-color: var(--color-col-context);
-}
-
-.contextSeedBadge {
-  font-family: var(--font-sans);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--color-col-context);
-  background: color-mix(in srgb, var(--color-col-context) 15%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-col-context) 30%, transparent);
-  border-radius: 999px;
-  padding: 2px 8px;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.contextSeedText {
-  flex: 1;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  color: var(--color-text-subtle);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  opacity: 0.7;
-}
-
-.contextSeedTextFilled {
-  color: var(--color-text-muted);
-  opacity: 1;
-}
-
-.contextSeedArrow {
-  color: color-mix(in srgb, var(--color-col-context) 55%, transparent);
-  flex-shrink: 0;
-  transition: color 0.15s;
-}
-.contextSeedActive .contextSeedArrow,
-.contextSeed:hover .contextSeedArrow {
-  color: var(--color-col-context);
-}
-
-/* ── Context panel (slides in beside modal) ─────── */
-.contextPanelWrap {
-  width: 0;
-  overflow: hidden;
-  flex-shrink: 0;
-  transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.contextPanelWrapOpen {
-  width: 352px; /* 340px panel + 12px gap */
-}
-
-.contextPanel {
+/* ── Panels column (always visible, to the right of modal) ── */
+.panelsColumn {
   width: 340px;
   margin-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.addPanelBtn {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-col-context);
+  background: color-mix(in srgb, var(--color-col-context) 8%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--color-col-context) 35%, transparent);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.addPanelBtn:hover {
+  background: color-mix(in srgb, var(--color-col-context) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-col-context) 55%, transparent);
+}
+
+/* ── Individual context panel ────────────────────── */
+.contextPanel {
+  width: 340px;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   border: 1px solid color-mix(in srgb, var(--color-col-context) 30%, var(--color-border));

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { BoardTask, ContextCard, BoardUser } from '../../pages/BoardPage'
+import type { BoardTask, ContextCard, BoardUser, TaskLink } from '../../pages/BoardPage'
 import type { TaskPriority, TaskStatus } from '../../lib/database.types'
 import { supabase } from '../../lib/supabase'
 import TaskCard from './TaskCard'
@@ -25,11 +25,18 @@ const RELATION_TYPES = [
   { value: 'assumption', label: 'Assumption' },
 ]
 
-const LINK_TYPES = [
-  { value: 'blocking',   label: 'Blocking' },
-  { value: 'waiting_on', label: 'Waiting On' },
-  { value: 'more_info',  label: 'More Info' },
+const LINK_OPTIONS = [
+  { value: 'blocks',     label: 'Blocks' },
+  { value: 'blocked_by', label: 'Blocked by' },
+  { value: 'parent_of',  label: 'Parent of' },
+  { value: 'child_of',   label: 'Child of' },
+  { value: 'waiting_on', label: 'Waiting on' },
+  { value: 'completes',  label: 'Completes' },
 ]
+
+function getLinkLabel(value: string) {
+  return LINK_OPTIONS.find((o) => o.value === value)?.label ?? value
+}
 
 interface AvailableLabel { id: string; name: string; color: string }
 
@@ -113,22 +120,31 @@ function LabelPicker({ available, selectedIds, onToggle }: LabelPickerProps) {
 }
 
 /* ── Drawer ──────────────────────────────────────────── */
+interface ResolvedTaskLink {
+  id: string
+  type: string
+  toTaskRefKey: number
+  toTaskTitle: string
+}
+
 interface Props {
   task: BoardTask
   boardId: string
   users: BoardUser[]
   currentUserId: string
   contextCards: ContextCard[]
+  taskLinks: ResolvedTaskLink[]
   onClose: () => void
   onUpdate: (changes: Partial<BoardTask>) => void
   onDelete: (id: string) => void
   onAddContext: (question: string, relationType: string) => void
   onOpenContext: (id: string) => void
+  onEnterLinkMode: (fromTaskId: string, fromRefKey: number, fromTitle: string, linkType: string, linkLabel: string) => void
 }
 
 export default function TaskDrawer({
-  task, boardId, users, currentUserId, contextCards,
-  onClose, onUpdate, onDelete, onAddContext, onOpenContext,
+  task, boardId, users, currentUserId, contextCards, taskLinks,
+  onClose, onUpdate, onDelete, onAddContext, onOpenContext, onEnterLinkMode,
 }: Props) {
   const [title, setTitle]             = useState(task.title)
   const [status, setStatus]           = useState(task.status)
@@ -141,6 +157,7 @@ export default function TaskDrawer({
   const [newRelType, setNewRelType]        = useState('details')
   const [assigneeId, setAssigneeId]        = useState(task.assignee?.id ?? '')
   const [confirmDelete, setConfirmDelete]  = useState(false)
+  const [selectedLinkType, setSelectedLinkType] = useState<string>('')
   const titleRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -150,6 +167,7 @@ export default function TaskDrawer({
     setDueDate(task.dueDate ?? '')
     setAssigneeId(task.assignee?.id ?? '')
     setAddingContext(false)
+    setSelectedLinkType('')
   }, [task.id])
 
   useEffect(() => {
@@ -392,6 +410,55 @@ export default function TaskDrawer({
               <p className={styles.contextEmpty}>No context yet.</p>
             )}
           </div>
+
+          {/* Linked Tasks */}
+          <div className={styles.linkedSection}>
+            <div className={styles.linkedSectionHeader}>
+              <span className={styles.sectionTitle}>Linked Tasks</span>
+            </div>
+            {taskLinks.length === 0 ? (
+              <p className={styles.linkedEmpty}>No linked tasks.</p>
+            ) : (
+              <div className={styles.linkedList}>
+                {taskLinks.map((link) => (
+                  <div key={link.id} className={styles.linkedItem}>
+                    <span className={styles.linkedType}>{getLinkLabel(link.type)}</span>
+                    <span className={styles.linkedTarget}>
+                      KAN-{link.toTaskRefKey}
+                      {link.toTaskTitle && <span className={styles.linkedTitle}> — {link.toTaskTitle}</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Connect section */}
+          <div className={styles.connectSection}>
+            <span className={styles.sectionTitle}>Connect to task</span>
+            <div className={styles.linkTypeGrid}>
+              {LINK_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`${styles.linkTypeBtn} ${selectedLinkType === opt.value ? styles.linkTypeBtnActive : ''}`}
+                  onClick={() => setSelectedLinkType(selectedLinkType === opt.value ? '' : opt.value)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {selectedLinkType && (
+              <button
+                type="button"
+                className={styles.selectTaskBtn}
+                onClick={() => onEnterLinkMode(task.id, task.refKey, task.title, selectedLinkType, getLinkLabel(selectedLinkType))}
+              >
+                Select a task on the board →
+              </button>
+            )}
+          </div>
+
           {/* Delete */}
           <div className={styles.deleteZone}>
             {confirmDelete ? (
@@ -413,4 +480,3 @@ export default function TaskDrawer({
     </>
   )
 }
-

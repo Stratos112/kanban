@@ -20,6 +20,15 @@
   box-shadow: var(--shadow-md), 0 0 0 1px var(--color-border);
 }
 
+/* Selectable (linking mode) */
+.selectable {
+  cursor: crosshair !important;
+}
+.selectable:hover {
+  transform: none;
+  box-shadow: 0 0 0 2px var(--color-accent), var(--shadow-md);
+}
+
 /* Priority strip colors */
 .priority_low    { border-left-color: var(--color-priority-low); }
 .priority_normal { border-left-color: var(--color-priority-normal); }
@@ -139,6 +148,14 @@
   background: color-mix(in srgb, var(--color-priority-high) 15%, transparent);
 }
 
+/* Blocked / waiting states */
+.isBlocked {
+  filter: saturate(0.12) brightness(0.88);
+}
+.isWaiting {
+  filter: saturate(0.28) brightness(0.94);
+}
+
 /* Body */
 .body { flex: 1; margin-top: -12px; }
 
@@ -207,6 +224,27 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     inset 0 -1px 0 rgba(0, 0, 0, 0.2),
     0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Status chips */
+.statusChip {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.blockerChip {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 22%, transparent);
+}
+
+.waitingChip {
+  color: #d97706;
+  background: color-mix(in srgb, #d97706 14%, transparent);
+  border: 1px solid color-mix(in srgb, #d97706 22%, transparent);
 }
 
 .meta {

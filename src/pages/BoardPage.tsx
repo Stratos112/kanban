@@ -32,6 +32,15 @@ const COLUMNS: { key: TaskStatus; label: string; accent: string }[] = [
   { key: 'completed',   label: 'Completed',   accent: 'var(--color-col-completed)' },
 ]
 
+const INVERSE_LINK: Record<string, string> = {
+  blocks:     'blocked_by',
+  blocked_by: 'blocks',
+  parent_of:  'child_of',
+  child_of:   'parent_of',
+  waiting_on: 'completes',
+  completes:  'waiting_on',
+}
+
 export interface BoardUser {
   id: string
   displayName: string
@@ -61,6 +70,14 @@ export interface ContextCard {
   priority: TaskPriority
   labels: { name: string; color?: string }[]
   parentTaskId: string
+}
+
+export interface TaskLink {
+  id: string
+  fromTaskId: string
+  toTaskId: string
+  type: string
+  linkedTaskId: string
 }
 
 /* ── Droppable column body ───────────────────────────── */
@@ -93,13 +110,21 @@ export default function BoardPage() {
   const [boardName, setBoardName]         = useState('')
   const [tasks, setTasks]                 = useState<BoardTask[]>([])
   const [contextCards, setContextCards]   = useState<ContextCard[]>([])
+  const [taskLinks, setTaskLinks]         = useState<TaskLink[]>([])
   const [users, setUsers]                 = useState<BoardUser[]>([])
   const [modalOpen, setModalOpen]         = useState(false)
   const [loadingTasks, setLoadingTasks]   = useState(true)
   const [activeId, setActiveId]           = useState<string | null>(null)
   const [openTaskId, setOpenTaskId]       = useState<string | null>(null)
   const [openContextId, setOpenContextId] = useState<string | null>(null)
-  const tasksSnapshot                     = useRef<BoardTask[]>([])
+  const [linkingState, setLinkingState]   = useState<{
+    fromTaskId: string
+    fromRefKey: number
+    fromTitle: string
+    linkType: string
+    linkLabel: string
+  } | null>(null)
+  const tasksSnapshot = useRef<BoardTask[]>([])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -127,6 +152,16 @@ export default function BoardPage() {
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [boardId, activeId])
+
+  // Close linking mode on Escape
+  useEffect(() => {
+    if (!linkingState) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLinkingState(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [linkingState])
 
   async function loadTasks(id: string) {
     setLoadingTasks(true)
@@ -205,6 +240,20 @@ export default function BoardPage() {
         }))
     )
 
+    // Load task relationships
+    const { data: links } = await supabase
+      .from('task_relationships')
+      .select('*')
+      .eq('board_id', id)
+
+    setTaskLinks((links ?? []).map((l: any) => ({
+      id:           l.id,
+      fromTaskId:   l.from_task_id,
+      toTaskId:     l.to_task_id,
+      type:         l.type,
+      linkedTaskId: l.to_task_id,
+    })))
+
     setLoadingTasks(false)
   }
 
@@ -256,39 +305,55 @@ export default function BoardPage() {
       }
     }
 
-    // Always create a context card alongside the task
-    const { data: ctxRow } = await supabase
-      .from('tasks')
-      .insert({
-        user_id:               userId,
-        board_id:              boardId,
-        type:                  'context',
-        status:                'context',
-        title:                 ctxTitle(payload.context.relationType, payload.title),
-        question:              payload.context.text || '',
-        context_relation_type: payload.context.relationType,
-        parent_link_type:      payload.context.linkType,
-        priority:              payload.context.priority,
-        parent_task_id:        row.id,
-        position:              contextCards.length,
-      })
-      .select()
-      .single()
+    // Create a context card for each context panel
+    const newCtxCards: ContextCard[] = []
+    for (const ctx of payload.contexts) {
+      const { data: ctxRow } = await supabase
+        .from('tasks')
+        .insert({
+          user_id:               userId,
+          board_id:              boardId,
+          type:                  'context',
+          status:                'context',
+          title:                 ctxTitle(ctx.relationType, payload.title),
+          question:              ctx.text || '',
+          context_relation_type: ctx.relationType,
+          parent_link_type:      ctx.linkType,
+          priority:              ctx.priority,
+          parent_task_id:        row.id,
+          position:              contextCards.length + newCtxCards.length,
+        })
+        .select()
+        .single()
 
-    // Attach labels to the context card
-    const ctxLabels: { name: string; color?: string }[] = []
-    if (ctxRow && payload.context.labels.length > 0) {
-      for (const name of payload.context.labels) {
-        const { data: lbl } = await supabase
-          .from('labels')
-          .select('id, color')
-          .eq('board_id', boardId)
-          .eq('name', name)
-          .maybeSingle()
-        if (lbl) {
-          await supabase.from('task_labels').insert({ task_id: ctxRow.id, label_id: lbl.id })
-          ctxLabels.push({ name, color: lbl.color })
+      const ctxLabels: { name: string; color?: string }[] = []
+      if (ctxRow && ctx.labels.length > 0) {
+        for (const name of ctx.labels) {
+          const { data: lbl } = await supabase
+            .from('labels')
+            .select('id, color')
+            .eq('board_id', boardId)
+            .eq('name', name)
+            .maybeSingle()
+          if (lbl) {
+            await supabase.from('task_labels').insert({ task_id: ctxRow.id, label_id: lbl.id })
+            ctxLabels.push({ name, color: lbl.color })
+          }
         }
+      }
+
+      if (ctxRow) {
+        newCtxCards.push({
+          id:           ctxRow.id,
+          refKey:       ctxRow.ref_key,
+          title:        ctxRow.title ?? '',
+          question:     ctxRow.question ?? '',
+          relationType: ctx.relationType,
+          linkType:     ctx.linkType,
+          priority:     ctx.priority,
+          labels:       ctxLabels,
+          parentTaskId: row.id,
+        })
       }
     }
 
@@ -304,18 +369,8 @@ export default function BoardPage() {
       labels:   payload.labels,
       assignee: assigneeUser ? { id: assigneeUser.id, name: assigneeUser.displayName, color: assigneeUser.avatarColor } : undefined,
     }])
-    if (ctxRow) {
-      setContextCards((prev) => [...prev, {
-        id:           ctxRow.id,
-        refKey:       ctxRow.ref_key,
-        title:        ctxRow.title ?? '',
-        question:     ctxRow.question ?? '',
-        relationType: payload.context.relationType,
-        linkType:     payload.context.linkType,
-        priority:     payload.context.priority,
-        labels:       ctxLabels,
-        parentTaskId: row.id,
-      }])
+    if (newCtxCards.length > 0) {
+      setContextCards((prev) => [...prev, ...newCtxCards])
     }
     setModalOpen(false)
   }
@@ -367,6 +422,39 @@ export default function BoardPage() {
 
   function handleContextUpdate(id: string, changes: Partial<ContextCard>) {
     setContextCards((prev) => prev.map((c) => c.id === id ? { ...c, ...changes } : c))
+  }
+
+  function handleEnterLinkMode(
+    fromTaskId: string,
+    fromRefKey: number,
+    fromTitle: string,
+    linkType: string,
+    linkLabel: string,
+  ) {
+    setOpenTaskId(null)
+    setLinkingState({ fromTaskId, fromRefKey, fromTitle, linkType, linkLabel })
+  }
+
+  async function handleSelectLinkTarget(targetTask: BoardTask) {
+    if (!linkingState || !boardId) return
+    const { fromTaskId, linkType } = linkingState
+    const inverseType = INVERSE_LINK[linkType] ?? linkType
+    await Promise.all([
+      supabase.from('task_relationships').insert({
+        from_task_id: fromTaskId,
+        to_task_id:   targetTask.id,
+        type:         linkType,
+        board_id:     boardId,
+      }),
+      supabase.from('task_relationships').insert({
+        from_task_id: targetTask.id,
+        to_task_id:   fromTaskId,
+        type:         inverseType,
+        board_id:     boardId,
+      }),
+    ])
+    setLinkingState(null)
+    loadTasks(boardId)
   }
 
   /* ── Drag handlers ─────────────────────────────────── */
@@ -466,6 +554,21 @@ export default function BoardPage() {
   const openTask      = openTaskId ? tasks.find((t) => t.id === openTaskId) ?? null : null
   const isLoading     = authLoading || loadingTasks
 
+  // Resolve task links for the open task
+  const openTaskLinks = openTask
+    ? taskLinks
+        .filter((l) => l.fromTaskId === openTask.id)
+        .map((l) => {
+          const target = tasks.find((t) => t.id === l.toTaskId)
+          return {
+            id:           l.id,
+            type:         l.type,
+            toTaskRefKey: target?.refKey ?? 0,
+            toTaskTitle:  target?.title ?? '',
+          }
+        })
+    : []
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -486,6 +589,45 @@ export default function BoardPage() {
         </div>
       </header>
 
+      {/* Linking mode overlay */}
+      {linkingState && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 50,
+              background: 'rgba(0,0,0,0.65)',
+              pointerEvents: 'auto',
+            }}
+            onClick={() => setLinkingState(null)}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: 16,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 60,
+              background: 'var(--color-surface-raised)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '10px 20px',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '13px',
+              color: 'var(--color-text)',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+              pointerEvents: 'none',
+            }}
+          >
+            Linking KAN-{linkingState.fromRefKey} as <strong>{linkingState.linkLabel}</strong> — click a task to connect
+            {' '}
+            <span style={{ color: 'var(--color-text-subtle)' }}>[Escape to cancel]</span>
+          </div>
+        </>
+      )}
+
       <DndContext
         sensors={sensors}
         collisionDetection={rectIntersection}
@@ -493,7 +635,10 @@ export default function BoardPage() {
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
       >
-        <div className={styles.board}>
+        <div
+          className={styles.board}
+          style={linkingState ? { position: 'relative', zIndex: 55 } as React.CSSProperties : undefined}
+        >
           {COLUMNS.map((col) => {
             const colTasks = tasksInColumn(col.key)
             const css = { '--col-accent': col.accent } as React.CSSProperties
@@ -519,21 +664,31 @@ export default function BoardPage() {
                       ? <div className={styles.empty}>Loading…</div>
                       : colTasks.length === 0
                         ? <div className={styles.empty}>No tasks</div>
-                        : colTasks.map((t) => (
-                            <SortableTaskCard
-                              key={t.id}
-                              id={t.id}
-                              refKey={t.refKey}
-                              type={t.type}
-                              title={t.title}
-                              priority={t.priority}
-                              dueDate={t.dueDate}
-                              labels={t.labels}
-                              assigneeColor={t.assignee?.color}
-                              assigneeName={t.assignee?.name}
-                              onOpen={() => setOpenTaskId(t.id)}
-                            />
-                          ))
+                        : colTasks.map((t) => {
+                            const tCtx = contextCards.filter((c) => c.parentTaskId === t.id)
+                            const blockedCount = tCtx.filter((c) => c.relationType === 'question' && c.linkType === 'blocking'   && !c.answer).length
+                            const waitingCount = tCtx.filter((c) => c.relationType === 'question' && c.linkType === 'waiting_on' && !c.answer).length
+                            const isSelectableCard = linkingState != null && t.id !== linkingState.fromTaskId
+                            return (
+                              <SortableTaskCard
+                                key={t.id}
+                                id={t.id}
+                                refKey={t.refKey}
+                                type={t.type}
+                                title={t.title}
+                                priority={t.priority}
+                                dueDate={t.dueDate}
+                                labels={t.labels}
+                                assigneeColor={t.assignee?.color}
+                                assigneeName={t.assignee?.name}
+                                blockedCount={blockedCount}
+                                waitingCount={waitingCount}
+                                onOpen={() => setOpenTaskId(t.id)}
+                                isSelectable={isSelectableCard}
+                                onSelect={() => handleSelectLinkTarget(t)}
+                              />
+                            )
+                          })
                     }
                   </SortableContext>
                 </ColumnBody>
@@ -628,11 +783,13 @@ export default function BoardPage() {
           users={users}
           currentUserId={userId ?? ''}
           contextCards={contextCards.filter((c) => c.parentTaskId === openTask.id)}
+          taskLinks={openTaskLinks}
           onClose={() => setOpenTaskId(null)}
           onUpdate={(changes) => handleTaskUpdate(openTask.id, changes)}
           onDelete={handleTaskDelete}
           onAddContext={(q, rt) => handleAddContext(openTask.id, q, rt)}
           onOpenContext={setOpenContextId}
+          onEnterLinkMode={handleEnterLinkMode}
         />
       )}
     </div>
