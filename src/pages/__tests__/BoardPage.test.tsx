@@ -23,15 +23,15 @@ describe('BoardPage', () => {
     expect(screen.getByRole('button', { name: /new task/i })).toBeInTheDocument()
   })
 
-  it('shows empty state in each column', () => {
+  it('renders task cards in columns', () => {
     renderWithRouter(<BoardPage />)
-    // Five task columns show "No tasks"
-    const noTaskMessages = screen.getAllByText(/no tasks/i)
-    expect(noTaskMessages.length).toBeGreaterThanOrEqual(5)
+    // Mock data includes tasks — at least one card title should be visible
+    expect(screen.getByText(/drag-and-drop board/i)).toBeInTheDocument()
   })
 
-  it('Context column has its own empty state', () => {
+  it('renders context cards in the Context column', () => {
     renderWithRouter(<BoardPage />)
-    expect(screen.getByText(/no context cards/i)).toBeInTheDocument()
+    // Mock context card question
+    expect(screen.getByText(/should we support custom columns/i)).toBeInTheDocument()
   })
 })
