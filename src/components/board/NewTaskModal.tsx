@@ -3,11 +3,14 @@ import type { TaskPriority, TaskStatus } from '../../lib/database.types'
 import { PRESET_LABELS } from '../../lib/labels'
 import styles from './NewTaskModal.module.css'
 
+interface UserOption { id: string; displayName: string; avatarColor: string }
+
 export interface NewTaskPayload {
   title: string
   status: Exclude<TaskStatus, 'context'>
   priority: TaskPriority
   dueDate: string
+  assigneeId: string
   labels: { name: string }[]
   context: {
     text: string
@@ -39,6 +42,8 @@ const CONTEXT_PLACEHOLDERS: Record<string, string> = {
 interface Props {
   onClose: () => void
   onSubmit: (task: NewTaskPayload) => void
+  users: UserOption[]
+  currentUserId: string
 }
 
 const STATUSES: { value: Exclude<TaskStatus, 'context'>; label: string }[] = [
@@ -130,11 +135,12 @@ function LabelPicker({ selected, onChange }: LabelPickerProps) {
 }
 
 /* ── Modal ───────────────────────────────────────────── */
-export default function NewTaskModal({ onClose, onSubmit }: Props) {
+export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }: Props) {
   const [title, setTitle]                 = useState('')
   const [status, setStatus]               = useState<Exclude<TaskStatus, 'context'>>('backlog')
   const [priority, setPriority]           = useState<TaskPriority>('normal')
   const [dueDate, setDueDate]             = useState('')
+  const [assigneeId, setAssigneeId]       = useState(currentUserId)
   const [labels, setLabels]               = useState<string[]>([])
   const [contextOpen, setContextOpen]         = useState(false)
   const [contextText, setContextText]         = useState('')
@@ -187,6 +193,7 @@ export default function NewTaskModal({ onClose, onSubmit }: Props) {
       status,
       priority,
       dueDate,
+      assigneeId,
       labels: labels.map((name) => ({ name })),
       context: {
         text:         contextText,
@@ -273,6 +280,22 @@ export default function NewTaskModal({ onClose, onSubmit }: Props) {
                   <LabelPicker selected={labels} onChange={setLabels} />
                 </div>
               </div>
+
+              <label className={styles.fieldGroup}>
+                <span className={styles.fieldLabel}>Assignee</span>
+                <select
+                  className={styles.select}
+                  value={assigneeId}
+                  onChange={(e) => setAssigneeId(e.target.value)}
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.id === currentUserId ? `${u.displayName} (you)` : u.displayName}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
               {/* Context seed — always present, click to toggle panel */}
               <div

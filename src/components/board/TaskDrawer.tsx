@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { BoardTask, ContextCard } from '../../pages/BoardPage'
+import type { BoardTask, ContextCard, BoardUser } from '../../pages/BoardPage'
 import type { TaskPriority, TaskStatus } from '../../lib/database.types'
 import { supabase } from '../../lib/supabase'
 import styles from './TaskDrawer.module.css'
@@ -115,6 +115,8 @@ function LabelPicker({ available, selectedIds, onToggle }: LabelPickerProps) {
 interface Props {
   task: BoardTask
   boardId: string
+  users: BoardUser[]
+  currentUserId: string
   contextCards: ContextCard[]
   onClose: () => void
   onUpdate: (changes: Partial<BoardTask>) => void
@@ -124,7 +126,7 @@ interface Props {
 }
 
 export default function TaskDrawer({
-  task, boardId, contextCards,
+  task, boardId, users, currentUserId, contextCards,
   onClose, onUpdate, onDelete, onAddContext, onUpdateContext,
 }: Props) {
   const [title, setTitle]             = useState(task.title)
@@ -136,6 +138,7 @@ export default function TaskDrawer({
   const [addingContext, setAddingContext]   = useState(false)
   const [newQuestion, setNewQuestion]      = useState('')
   const [newRelType, setNewRelType]        = useState('details')
+  const [assigneeId, setAssigneeId]        = useState(task.assignee?.id ?? '')
   const [confirmDelete, setConfirmDelete]  = useState(false)
   const titleRef = useRef<HTMLTextAreaElement>(null)
 
@@ -144,6 +147,7 @@ export default function TaskDrawer({
     setStatus(task.status)
     setPriority(task.priority)
     setDueDate(task.dueDate ?? '')
+    setAssigneeId(task.assignee?.id ?? '')
     setAddingContext(false)
   }, [task.id])
 
@@ -195,6 +199,13 @@ export default function TaskDrawer({
     setDueDate(val)
     await supabase.from('tasks').update({ due_date: val || null }).eq('id', task.id)
     onUpdate({ dueDate: val || undefined })
+  }
+
+  async function saveAssignee(val: string) {
+    setAssigneeId(val)
+    await supabase.from('tasks').update({ assignee_id: val || null }).eq('id', task.id)
+    const user = users.find((u) => u.id === val)
+    onUpdate({ assignee: user ? { id: user.id, name: user.displayName, color: user.avatarColor } : undefined })
   }
 
   async function toggleLabel(labelId: string) {
@@ -314,6 +325,22 @@ export default function TaskDrawer({
                 selectedIds={selectedIds}
                 onToggle={toggleLabel}
               />
+            </div>
+
+            <div className={styles.metaRow}>
+              <span className={styles.metaLabel}>Assignee</span>
+              <select
+                className={styles.metaSelect}
+                value={assigneeId}
+                onChange={(e) => saveAssignee(e.target.value)}
+              >
+                <option value="">Unassigned</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.id === currentUserId ? `${u.displayName} (you)` : u.displayName}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

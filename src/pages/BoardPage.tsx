@@ -31,6 +31,12 @@ const COLUMNS: { key: TaskStatus; label: string; accent: string }[] = [
   { key: 'completed',   label: 'Completed',   accent: 'var(--color-col-completed)' },
 ]
 
+export interface BoardUser {
+  id: string
+  displayName: string
+  avatarColor: string
+}
+
 export interface BoardTask {
   id: string
   refKey: number
@@ -40,6 +46,7 @@ export interface BoardTask {
   priority: TaskPriority
   dueDate?: string
   labels: { name: string; color?: string }[]
+  assignee?: { id: string; name: string; color: string }
 }
 
 export interface ContextCard {
@@ -84,6 +91,7 @@ export default function BoardPage() {
   const [boardName, setBoardName]         = useState('')
   const [tasks, setTasks]                 = useState<BoardTask[]>([])
   const [contextCards, setContextCards]   = useState<ContextCard[]>([])
+  const [users, setUsers]                 = useState<BoardUser[]>([])
   const [modalOpen, setModalOpen]         = useState(false)
   const [loadingTasks, setLoadingTasks]   = useState(true)
   const [activeId, setActiveId]           = useState<string | null>(null)
@@ -129,22 +137,49 @@ export default function BoardPage() {
 
     const rows = data ?? []
 
+    // Fetch profiles for everyone active on this board (task creators + assignees + self)
+    const profileIds = [...new Set([
+      ...rows.map((r) => r.user_id),
+      ...rows.filter((r) => r.assignee_id).map((r) => r.assignee_id as string),
+      userId!,
+    ])].filter(Boolean)
+
+    const profileMap = new Map<string, { displayName: string; avatarColor: string }>()
+    if (profileIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_color')
+        .in('id', profileIds)
+      for (const p of profiles ?? []) {
+        profileMap.set(p.id, { displayName: p.display_name, avatarColor: p.avatar_color })
+      }
+      setUsers(
+        (profiles ?? [])
+          .map((p) => ({ id: p.id, displayName: p.display_name, avatarColor: p.avatar_color }))
+          .sort((a, b) => a.displayName.localeCompare(b.displayName))
+      )
+    }
+
     setTasks(
       rows
         .filter((r) => r.status !== 'context')
-        .map((row) => ({
-          id:       row.id,
-          refKey:   row.ref_key,
-          type:     'task' as const,
-          status:   row.status as Exclude<TaskStatus, 'context'>,
-          title:    row.title ?? '',
-          priority: (row.priority ?? 'normal') as TaskPriority,
-          dueDate:  row.due_date ?? undefined,
-          labels:   (row.task_labels as any[])
-                      .map((tl) => tl.labels)
-                      .filter(Boolean)
-                      .map((l: { name: string; color: string }) => ({ name: l.name, color: l.color })),
-        }))
+        .map((row) => {
+          const profile = row.assignee_id ? profileMap.get(row.assignee_id) : undefined
+          return {
+            id:       row.id,
+            refKey:   row.ref_key,
+            type:     'task' as const,
+            status:   row.status as Exclude<TaskStatus, 'context'>,
+            title:    row.title ?? '',
+            priority: (row.priority ?? 'normal') as TaskPriority,
+            dueDate:  row.due_date ?? undefined,
+            labels:   (row.task_labels as any[])
+                        .map((tl) => tl.labels)
+                        .filter(Boolean)
+                        .map((l: { name: string; color: string }) => ({ name: l.name, color: l.color })),
+            assignee: profile ? { id: row.assignee_id, name: profile.displayName, color: profile.avatarColor } : undefined,
+          }
+        })
     )
 
     setContextCards(
@@ -175,14 +210,15 @@ export default function BoardPage() {
     const { data: row, error } = await supabase
       .from('tasks')
       .insert({
-        user_id:  userId,
-        board_id: boardId,
-        type:     'task',
-        title:    payload.title,
-        status:   payload.status,
-        priority: payload.priority,
-        due_date: payload.dueDate || null,
-        position: tasks.length,
+        user_id:     userId,
+        board_id:    boardId,
+        type:        'task',
+        title:       payload.title,
+        status:      payload.status,
+        priority:    payload.priority,
+        due_date:    payload.dueDate || null,
+        assignee_id: payload.assigneeId || null,
+        position:    tasks.length,
       })
       .select()
       .single()
@@ -246,6 +282,7 @@ export default function BoardPage() {
       }
     }
 
+    const assigneeUser = users.find((u) => u.id === payload.assigneeId)
     setTasks((prev) => [...prev, {
       id:       row.id,
       refKey:   row.ref_key,
@@ -255,6 +292,7 @@ export default function BoardPage() {
       priority: (row.priority ?? 'normal') as TaskPriority,
       dueDate:  row.due_date ?? undefined,
       labels:   payload.labels,
+      assignee: assigneeUser ? { id: assigneeUser.id, name: assigneeUser.displayName, color: assigneeUser.avatarColor } : undefined,
     }])
     if (ctxRow) {
       setContextCards((prev) => [...prev, {
@@ -473,6 +511,8 @@ export default function BoardPage() {
                               priority={t.priority}
                               dueDate={t.dueDate}
                               labels={t.labels}
+                              assigneeColor={t.assignee?.color}
+                              assigneeName={t.assignee?.name}
                               onOpen={() => setOpenTaskId(t.id)}
                             />
                           ))
@@ -528,6 +568,8 @@ export default function BoardPage() {
                 priority={activeTask.priority}
                 dueDate={activeTask.dueDate}
                 labels={activeTask.labels}
+                assigneeColor={activeTask.assignee?.color}
+                assigneeName={activeTask.assignee?.name}
               />
             </div>
           )}
@@ -538,6 +580,8 @@ export default function BoardPage() {
         <NewTaskModal
           onClose={() => setModalOpen(false)}
           onSubmit={handleCreate}
+          users={users}
+          currentUserId={userId ?? ''}
         />
       )}
 
@@ -545,6 +589,8 @@ export default function BoardPage() {
         <TaskDrawer
           task={openTask}
           boardId={boardId}
+          users={users}
+          currentUserId={userId ?? ''}
           contextCards={contextCards.filter((c) => c.parentTaskId === openTask.id)}
           onClose={() => setOpenTaskId(null)}
           onUpdate={(changes) => handleTaskUpdate(openTask.id, changes)}
