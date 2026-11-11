@@ -35,6 +35,55 @@
   margin-top: -2px;
 }
 
+/* Narrow band (details / assumption) */
+.contextBand {
+  padding: 0;
+  gap: 0;
+}
+
+.bandRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 14px;
+}
+
+.bandType {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-col-context);
+  background: color-mix(in srgb, var(--color-col-context) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 25%, transparent);
+  border-radius: 999px;
+  padding: 1px 7px;
+  flex-shrink: 0;
+}
+
+.bandTitle {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Question card heading */
+.contextTitle {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: color-mix(in srgb, var(--color-col-context) 65%, var(--color-text-muted));
+  margin: 0 0 5px;
+  opacity: 0.9;
+}
+
 /* Header row */
 .header {
   display: flex;

@@ -52,6 +52,7 @@ export interface BoardTask {
 export interface ContextCard {
   id: string
   refKey: number
+  title: string
   question: string
   answer?: string
   relationType: string
@@ -188,6 +189,7 @@ export default function BoardPage() {
         .map((row) => ({
           id:           row.id,
           refKey:       row.ref_key,
+          title:        row.title ?? '',
           question:     row.question ?? '',
           answer:       row.answer ?? undefined,
           relationType: row.context_relation_type ?? 'details',
@@ -202,6 +204,11 @@ export default function BoardPage() {
     )
 
     setLoadingTasks(false)
+  }
+
+  function ctxTitle(relationType: string, parentTitle: string) {
+    const type = relationType.charAt(0).toUpperCase() + relationType.slice(1)
+    return `${type} for '${parentTitle}'`
   }
 
   async function handleCreate(payload: NewTaskPayload) {
@@ -255,6 +262,7 @@ export default function BoardPage() {
         board_id:              boardId,
         type:                  'context',
         status:                'context',
+        title:                 ctxTitle(payload.context.relationType, payload.title),
         question:              payload.context.text || '',
         context_relation_type: payload.context.relationType,
         parent_link_type:      payload.context.linkType,
@@ -298,6 +306,7 @@ export default function BoardPage() {
       setContextCards((prev) => [...prev, {
         id:           ctxRow.id,
         refKey:       ctxRow.ref_key,
+        title:        ctxRow.title ?? '',
         question:     ctxRow.question ?? '',
         relationType: payload.context.relationType,
         linkType:     payload.context.linkType,
@@ -321,6 +330,8 @@ export default function BoardPage() {
 
   async function handleAddContext(parentTaskId: string, question: string, relationType: string) {
     if (!userId || !boardId) return
+    const parentTask = tasks.find((t) => t.id === parentTaskId)
+    const title = ctxTitle(relationType, parentTask?.title ?? 'Task')
     const { data: row } = await supabase
       .from('tasks')
       .insert({
@@ -328,6 +339,7 @@ export default function BoardPage() {
         board_id:              boardId,
         type:                  'context',
         status:                'context',
+        title,
         question,
         context_relation_type: relationType,
         parent_task_id:        parentTaskId,
@@ -340,8 +352,12 @@ export default function BoardPage() {
       setContextCards((prev) => [...prev, {
         id:           row.id,
         refKey:       row.ref_key,
+        title,
         question:     row.question ?? '',
         relationType,
+        linkType:     'blocking',
+        priority:     'normal',
+        labels:       [],
         parentTaskId,
       }])
     }
@@ -547,9 +563,13 @@ export default function BoardPage() {
                           key={c.id}
                           refKey={c.refKey}
                           type="context"
+                          title={c.title}
+                          relationType={c.relationType}
                           question={c.question}
                           answer={c.answer}
+                          priority={c.priority}
                           parentRefKey={parent?.refKey}
+                          parentTitle={parent?.title}
                         />
                       )
                     })

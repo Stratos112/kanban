@@ -4,6 +4,7 @@ import styles from './TaskCard.module.css'
 export interface TaskCardProps {
   refKey: number
   type: 'task' | 'context'
+  relationType?: string
   title?: string | null
   question?: string | null
   answer?: string | null
@@ -13,11 +14,13 @@ export interface TaskCardProps {
   assigneeColor?: string | null
   assigneeName?: string | null
   parentRefKey?: number
+  parentTitle?: string
 }
 
 export default function TaskCard({
   refKey,
   type,
+  relationType,
   title,
   question,
   answer,
@@ -27,21 +30,41 @@ export default function TaskCard({
   assigneeColor,
   assigneeName,
   parentRefKey,
+  parentTitle,
 }: TaskCardProps) {
-  const isContext = type === 'context'
+  const isContext   = type === 'context'
+  const isQuestion  = isContext && relationType === 'question'
+  const isBand      = isContext && !isQuestion
 
+  /* ── Narrow band for details / assumption ── */
+  if (isBand) {
+    return (
+      <div className={`${styles.card} ${styles.contextCard} ${styles.contextBand}`}>
+        <div className={styles.bandRow}>
+          <span className={styles.bandType}>{relationType ?? 'details'}</span>
+          <span className={styles.bandTitle}>{parentTitle || title || '—'}</span>
+          <span className={styles.refKey}>
+            KAN-{refKey}
+            {parentRefKey != null && <span className={styles.parentLink}> → KAN-{parentRefKey}</span>}
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Full card for tasks and questions ── */
   return (
     <div
       className={`${styles.card} ${isContext ? styles.contextCard : ''} ${priority ? styles[`priority_${priority}`] : ''}`}
     >
       <div className={styles.header}>
         <span className={styles.refKey}>
-          {isContext ? '?' : ''}KAN-{refKey}
+          KAN-{refKey}
           {isContext && parentRefKey != null && (
             <span className={styles.parentLink}> → KAN-{parentRefKey}</span>
           )}
         </span>
-        {!isContext && priority && (
+        {priority && (
           <span className={styles.priorityWell}>
             <span className={`${styles.priorityBadge} ${styles[`badge_${priority}`]}`}>
               {priority}
@@ -53,11 +76,9 @@ export default function TaskCard({
       <div className={styles.body}>
         {isContext ? (
           <>
-            <p className={styles.question}>{question}</p>
-            {answer
-              ? <p className={styles.answer}>{answer}</p>
-              : <span className={styles.unanswered}>Unanswered</span>
-            }
+            {title && <p className={styles.contextTitle}>{title}</p>}
+            {question && <p className={styles.question}>{question}</p>}
+            {!question && <span className={styles.unanswered}>Unanswered</span>}
           </>
         ) : (
           <p className={styles.title}>{title}</p>
