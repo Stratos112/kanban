@@ -8,7 +8,7 @@
   transition: transform 0.1s, box-shadow 0.1s;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   user-select: none;
 
   /* Priority strip — left edge */
@@ -31,6 +31,10 @@
   background: color-mix(in srgb, var(--color-surface-raised) 95%, #e879f9 5%);
 }
 
+.contextCard .body {
+  margin-top: -2px;
+}
+
 /* Header row */
 .header {
   display: flex;
@@ -46,13 +50,26 @@
   letter-spacing: 0.04em;
 }
 
+.priorityWell {
+  border-radius: 999px;
+  padding: 18px 24px 18px 90px;
+  margin-left: auto;
+  margin-right: -11px;
+  margin-top: -14px;
+  background: radial-gradient(ellipse at 80% 50%, rgba(0,0,0,0.45) 0%, transparent 55%);
+}
+
 .priorityBadge {
+  display: block;
+  position: relative;
+  left: 14px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 2px 6px;
   border-radius: 999px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .badge_low {
@@ -64,19 +81,19 @@
   background: color-mix(in srgb, var(--color-priority-normal) 15%, transparent);
 }
 .badge_high {
-  color: var(--color-priority-high);
+  color: color-mix(in srgb, #fff 20%, var(--color-priority-high) 80%);
   background: color-mix(in srgb, var(--color-priority-high) 15%, transparent);
 }
 
 /* Body */
-.body { flex: 1; }
+.body { flex: 1; margin-top: -12px; }
 
 .title {
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text);
   line-height: 1.45;
-  margin: 0;
+  margin: 0 0 6px;
 }
 
 .question {
@@ -122,11 +139,17 @@
 
 .label {
   font-size: 10px;
-  font-weight: 500;
-  padding: 2px 7px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
   border-radius: 999px;
-  color: var(--label-color, var(--color-accent));
-  background: color-mix(in srgb, var(--label-color, var(--color-accent)) 15%, transparent);
+  color: #cdd9e5;
+  background: linear-gradient(180deg, #2e3d52 0%, #1b2a3e 100%);
+  border: 1px solid rgba(99, 130, 180, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .meta {

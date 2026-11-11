@@ -114,13 +114,13 @@
     0 8px 24px rgba(0,0,0,0.55),
     0 16px 48px rgba(0,0,0,0.3),
     0 0 0 1px var(--color-border),
-    inset 0 0 0 1px rgba(220, 38, 38, 0.3);
+    inset 0 0 0 1px rgba(129, 90, 236, 0.35);
 }
 
 .inReviewColumn .columnHeader {
   border-top-width: 2px;
-  border-top-color: rgba(220, 38, 38, 0.6);
-  box-shadow: inset 1px 0 0 rgba(220, 38, 38, 0.25), inset -1px 0 0 rgba(220, 38, 38, 0.25);
+  border-top-color: rgba(129, 90, 236, 0.7);
+  box-shadow: inset 1px 0 0 rgba(129, 90, 236, 0.3), inset -1px 0 0 rgba(129, 90, 236, 0.3);
 }
 
 /* Boost contrast for in_review's very dark background */

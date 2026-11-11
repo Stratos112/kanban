@@ -26,10 +26,10 @@
   --color-warning:        #d97706;
   --color-success:        #16a34a;
 
-  /* ── Priority strips — cool → warm → hot progression ─ */
-  --color-priority-low:    #38bdf8;   /* sky blue — calm, low urgency  */
-  --color-priority-normal: #f97316;   /* orange   — moderate urgency   */
-  --color-priority-high:   #ef4444;   /* red      — urgent             */
+  /* ── Priority strips — grey-gold → amber → heavy red ─ */
+  --color-priority-low:    #b4a68a;   /* grey-gold  — calm, low urgency  */
+  --color-priority-normal: #c09040;   /* amber      — moderate urgency   */
+  --color-priority-high:   #c0542e;   /* red-orange — urgent             */
 
   /* ── Column accents — grey → teal → green gradient ───
      In Review breaks the gradient intentionally (gate).

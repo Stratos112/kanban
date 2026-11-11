@@ -9,7 +9,7 @@ export interface TaskCardProps {
   answer?: string | null
   priority?: TaskPriority | null
   dueDate?: string | null
-  labels?: { name: string; color: string }[]
+  labels?: { name: string; color?: string }[]
   assigneeColor?: string | null
   assigneeName?: string | null
 }
@@ -37,8 +37,10 @@ export default function TaskCard({
           {isContext ? '?' : ''}KAN-{refKey}
         </span>
         {!isContext && priority && (
-          <span className={`${styles.priorityBadge} ${styles[`badge_${priority}`]}`}>
-            {priority}
+          <span className={styles.priorityWell}>
+            <span className={`${styles.priorityBadge} ${styles[`badge_${priority}`]}`}>
+              {priority}
+            </span>
           </span>
         )}
       </div>
