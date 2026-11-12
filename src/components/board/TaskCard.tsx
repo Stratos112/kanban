@@ -19,6 +19,7 @@ export interface TaskCardProps {
   waitingCount?: number
   isParent?: boolean
   isWaitingOnTask?: boolean
+  isCompleted?: boolean
   isSelectable?: boolean
   onSelect?: () => void
 }
@@ -41,6 +42,7 @@ export default function TaskCard({
   waitingCount = 0,
   isParent = false,
   isWaitingOnTask = false,
+  isCompleted = false,
   isSelectable,
   onSelect,
 }: TaskCardProps) {
@@ -80,7 +82,7 @@ export default function TaskCard({
         isContext ? styles.contextCard : '',
         isQuestion && !isAnswered ? styles.questionUnanswered : '',
         priority ? styles[`priority_${priority}`] : '',
-        isBlocked ? styles.isBlocked : isWaiting ? styles.isWaiting : '',
+        isCompleted ? styles.isCompleted : isBlocked ? styles.isBlocked : isWaiting ? styles.isWaiting : '',
         isSelectable ? styles.selectable : '',
         isWaitingOnTask ? styles.hasZzz : '',
       ].filter(Boolean).join(' ')}

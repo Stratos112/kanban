@@ -160,6 +160,13 @@
   background: color-mix(in srgb, var(--color-priority-high) 15%, transparent);
 }
 
+/* Completed state — muted green tint */
+.isCompleted {
+  background: color-mix(in srgb, var(--color-surface-raised) 80%, #22c55e 20%);
+  opacity: 0.75;
+  filter: saturate(0.55);
+}
+
 /* Blocked / waiting states */
 .isBlocked {
   filter: saturate(0.12) brightness(0.88);
