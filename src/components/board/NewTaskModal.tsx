@@ -24,9 +24,8 @@ export interface NewTaskPayload {
 }
 
 const CONTEXT_TYPES = [
-  { value: 'details',    label: 'Details' },
-  { value: 'question',   label: 'Question' },
-  { value: 'assumption', label: 'Assumption' },
+  { value: 'question', label: 'Question' },
+  { value: 'comment',  label: 'Comment' },
 ]
 
 const LINK_TYPES = [
@@ -36,9 +35,8 @@ const LINK_TYPES = [
 ]
 
 const CONTEXT_PLACEHOLDERS: Record<string, string> = {
-  details:    'Add notes, comments, or descriptions…',
-  question:   'State what you want to find out…',
-  assumption: 'Describe what you\'re assuming to be true…',
+  question: 'State what you want to find out…',
+  comment:  'Add a note or comment…',
 }
 
 interface Props {
@@ -149,7 +147,7 @@ let _nextPanelId = 1
 function nextId() { return _nextPanelId++ }
 
 function makePanel(): PanelState {
-  return { id: nextId(), text: '', relationType: 'details', linkType: 'blocking', priority: 'normal' }
+  return { id: nextId(), text: '', relationType: 'question', linkType: 'blocking', priority: 'normal' }
 }
 
 /* ── Side context panel ──────────────────────────────── */
@@ -260,7 +258,7 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
       dueDate,
       assigneeId,
       labels: labels.map((name) => ({ name })),
-      contexts: panels.map((p) => ({
+      contexts: panels.filter((p) => p.relationType !== 'details').map((p) => ({
         text:         p.text,
         relationType: p.relationType,
         linkType:     p.linkType,
