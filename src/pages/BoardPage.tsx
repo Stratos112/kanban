@@ -122,7 +122,7 @@ function ColumnBody({
 /* ── Page ────────────────────────────────────────────── */
 export default function BoardPage() {
   const { slug } = useParams<{ slug: string }>()
-  const { userId, loading: authLoading, hideOthers } = useAuth()
+  const { userId, loading: authLoading, hideOthers, setHideOthers } = useAuth()
 
   const [boardId, setBoardId]             = useState<string | null>(null)
   const [boardName, setBoardName]         = useState('')
@@ -867,7 +867,15 @@ export default function BoardPage() {
           <span className={styles.taskCount}>{tasks.length} tasks</span>
         </div>
         <div className={styles.headerRight}>
-          <input className={styles.search} type="search" placeholder="Search tasks…" />
+          <button
+            type="button"
+            className={`${styles.focusToggle} ${hideOthers ? styles.focusToggleOn : ''}`}
+            onClick={() => setHideOthers(!hideOthers)}
+            title={hideOthers ? 'Focus mode on — click to show all tasks' : 'Focus mode off — click to show only your tasks'}
+          >
+            <span className={styles.focusDot} />
+            Focus
+          </button>
           <button
             className={styles.addButton}
             type="button"
