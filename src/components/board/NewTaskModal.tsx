@@ -208,7 +208,7 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
   const [status, setStatus]         = useState<Exclude<TaskStatus, 'context'>>('backlog')
   const [priority, setPriority]     = useState<TaskPriority>('normal')
   const [dueDate, setDueDate]       = useState('')
-  const [assigneeId, setAssigneeId] = useState(currentUserId)
+  const [assigneeId, setAssigneeId] = useState('')
   const [labels, setLabels]         = useState<string[]>([])
   const [panels, setPanels]         = useState<PanelState[]>(() => [makePanel()])
   const [openPanelIds, setOpenPanelIds] = useState<number[]>(() => [panels[0].id])
@@ -357,10 +357,8 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
                   onChange={(e) => setAssigneeId(e.target.value)}
                 >
                   <option value="">Unassigned</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.id === currentUserId ? `${u.displayName} (you)` : u.displayName}
-                    </option>
+                  {users.filter((u) => u.id === currentUserId).map((u) => (
+                    <option key={u.id} value={u.id}>{u.displayName} (you)</option>
                   ))}
                 </select>
               </label>
