@@ -511,7 +511,7 @@
 
 .linkedItem {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   padding: 6px 10px;
   border-radius: var(--radius-sm);
@@ -575,6 +575,75 @@
   white-space: nowrap;
   min-width: 0;
   flex: 1;
+}
+
+.linkedDeleteBtn {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--color-text-subtle);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  padding: 0 2px;
+  border-radius: 4px;
+  transition: opacity 0.12s, color 0.12s;
+}
+
+.linkedItem:hover .linkedDeleteBtn {
+  opacity: 0.5;
+}
+
+.linkedDeleteBtn:hover {
+  opacity: 1 !important;
+  color: var(--color-danger);
+}
+
+.linkedDeleteConfirm {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.linkedDeleteAsk {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.linkedDeleteYes,
+.linkedDeleteNo {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid;
+}
+
+.linkedDeleteYes {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-danger) 25%, transparent);
+}
+
+.linkedDeleteYes:hover {
+  background: color-mix(in srgb, var(--color-danger) 20%, transparent);
+}
+
+.linkedDeleteNo {
+  color: var(--color-text-muted);
+  background: transparent;
+  border-color: var(--color-border);
+}
+
+.linkedDeleteNo:hover {
+  background: var(--color-surface-raised);
 }
 
 /* ── Connect section ─────────────────────────────────── */
