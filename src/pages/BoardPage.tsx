@@ -155,6 +155,7 @@ export default function BoardPage() {
   const [cascadingIds, setCascadingIds] = useState<Set<string>>(new Set())
   const [leavingTasks, setLeavingTasks] = useState<BoardTask[]>([])
   const [poppingContextIds, setPoppingContextIds] = useState<Set<string>>(new Set())
+  const [collapsedCols, setCollapsedCols] = useState<Set<string>>(new Set())
   const tasksSnapshot = useRef<BoardTask[]>([])
   const cascadeActiveRef = useRef(false)
   const creatingRef   = useRef(false)
@@ -172,6 +173,33 @@ export default function BoardPage() {
       loadTasks(board.id)
     })
   }, [slug, authLoading])
+
+  // Ensure every task has a details card (lazy-creates for tasks created before this feature)
+  useEffect(() => {
+    if (!openTaskId || !userId || !boardId) return
+    const hasDetails = contextCards.some((c) => c.parentTaskId === openTaskId && c.relationType === 'details')
+    if (hasDetails) return
+    const parentTask = tasks.find((t) => t.id === openTaskId)
+    if (!parentTask) return
+    supabase.from('tasks').insert({
+      user_id:               userId,
+      board_id:              boardId,
+      type:                  'context',
+      status:                'context',
+      title:                 `Details for '${parentTask.title}'`,
+      question:              '',
+      context_relation_type: 'details',
+      parent_task_id:        openTaskId,
+      position:              0,
+    }).select().single().then(({ data: ctxRow }) => {
+      if (ctxRow) {
+        setContextCards((prev) => [
+          { id: ctxRow.id, refKey: ctxRow.ref_key, title: ctxRow.title ?? '', question: '', relationType: 'details', linkType: 'blocking', priority: 'normal', labels: [], parentTaskId: openTaskId },
+          ...prev,
+        ])
+      }
+    })
+  }, [openTaskId])
 
   useEffect(() => {
     if (!boardId) return
@@ -327,6 +355,26 @@ export default function BoardPage() {
       .single()
 
     if (error || !row) { console.error(error); return }
+
+    // Auto-create the required details card and log task creation
+    await Promise.all([
+      supabase.from('tasks').insert({
+        user_id:               userId,
+        board_id:              boardId,
+        type:                  'context',
+        status:                'context',
+        title:                 `Details for '${payload.title}'`,
+        question:              '',
+        context_relation_type: 'details',
+        parent_task_id:        row.id,
+        position:              0,
+      }),
+      supabase.from('activity_log').insert({
+        task_id:  row.id,
+        actor_id: userId,
+        action:   'task_created',
+      }),
+    ])
 
     for (const { name } of payload.labels) {
       let { data: label } = await supabase
@@ -938,6 +986,12 @@ export default function BoardPage() {
             const colTasks = tasksInColumn(col.key)
             const css = { '--col-accent': col.accent } as React.CSSProperties
             const isDragTarget = activeTask?.status === col.key
+            const isCollapsed = collapsedCols.has(col.key)
+            const toggleCollapse = () => setCollapsedCols((prev) => {
+              const next = new Set(prev)
+              next.has(col.key) ? next.delete(col.key) : next.add(col.key)
+              return next
+            })
             return (
               <section
                 key={col.key}
@@ -946,6 +1000,7 @@ export default function BoardPage() {
                   col.key === 'in_review' && styles.inReviewColumn,
                   col.key === 'completed' && styles.completedColumn,
                   isDragTarget && styles.columnDragTarget,
+                  isCollapsed && styles.columnCollapsed,
                 ].filter(Boolean).join(' ')}
                 style={{ ...css, ...(linkingState ? { position: 'relative' } : {}) }}
               >
@@ -957,7 +1012,11 @@ export default function BoardPage() {
                     borderRadius: 'inherit',
                   }} />
                 )}
-                <div className={styles.columnHeader} style={css}>
+                <div
+                  className={`${styles.columnHeader} ${styles.columnHeaderClickable}`}
+                  style={css}
+                  onClick={toggleCollapse}
+                >
                   <span className={styles.columnLabel}>{col.label}</span>
                   <span className={styles.columnCount}>{colTasks.length}</span>
                 </div>
@@ -1035,8 +1094,12 @@ export default function BoardPage() {
           })}
 
           {/* Context column */}
+          {(() => {
+            const ctxCollapsed = collapsedCols.has('context')
+            const toggleCtx = () => setCollapsedCols((prev) => { const n = new Set(prev); n.has('context') ? n.delete('context') : n.add('context'); return n })
+            return (
           <section
-            className={`${styles.column} ${styles.contextColumn}`}
+            className={[styles.column, styles.contextColumn, ctxCollapsed && styles.columnCollapsed].filter(Boolean).join(' ')}
             style={{ '--col-accent': 'var(--color-col-context)', ...(linkingState ? { position: 'relative' } : {}) } as React.CSSProperties}
           >
             {linkingState && (
@@ -1048,8 +1111,9 @@ export default function BoardPage() {
               }} />
             )}
             <div
-              className={styles.columnHeader}
+              className={`${styles.columnHeader} ${styles.columnHeaderClickable}`}
               style={{ '--col-accent': 'var(--color-col-context)' } as React.CSSProperties}
+              onClick={toggleCtx}
             >
               <span className={styles.columnLabel}>Context</span>
               <span className={styles.columnCount}>{contextCards.length}</span>
@@ -1093,6 +1157,8 @@ export default function BoardPage() {
               }
             </div>
           </section>
+            )
+          })()}
         </div>
 
         <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>

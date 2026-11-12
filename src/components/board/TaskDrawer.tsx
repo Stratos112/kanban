@@ -5,6 +5,42 @@ import { supabase } from '../../lib/supabase'
 import TaskCard from './TaskCard'
 import styles from './TaskDrawer.module.css'
 
+interface ActivityEntry {
+  id: string
+  action: string
+  payload: Record<string, unknown> | null
+  created_at: string
+}
+
+function formatActivity(entry: ActivityEntry): string {
+  const p = entry.payload ?? {}
+  switch (entry.action) {
+    case 'task_created':     return 'Task created'
+    case 'title_edited':     return 'Title updated'
+    case 'status_changed':   return `Status: ${p.from} → ${p.to}`
+    case 'priority_changed': return `Priority: ${p.from} → ${p.to}`
+    case 'assigned':         return `Assigned to ${p.name}`
+    case 'unassigned':       return 'Unassigned'
+    case 'due_date_set':     return `Due date: ${p.to}`
+    case 'due_date_cleared': return 'Due date removed'
+    case 'comment_added':    return 'Comment added'
+    case 'question_added':   return 'Question added'
+    default:                 return entry.action.replace(/_/g, ' ')
+  }
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 30) return `${days}d ago`
+  return new Date(iso).toLocaleDateString()
+}
+
 const STATUSES: { value: Exclude<TaskStatus, 'context'>; label: string }[] = [
   { value: 'backlog',     label: 'Backlog' },
   { value: 'ready',       label: 'Ready' },
@@ -20,9 +56,8 @@ const PRIORITIES: { value: TaskPriority; label: string }[] = [
 ]
 
 const RELATION_TYPES = [
-  { value: 'details',    label: 'Details' },
-  { value: 'question',   label: 'Question' },
-  { value: 'assumption', label: 'Assumption' },
+  { value: 'question', label: 'Question' },
+  { value: 'comment',  label: 'Comment' },
 ]
 
 const LINK_OPTIONS = [
@@ -169,6 +204,8 @@ export default function TaskDrawer({
   const [confirmDeleteLinkId, setConfirmDeleteLinkId] = useState<string | null>(null)
   const [selectedLinkType, setSelectedLinkType] = useState<string>('')
   const [expandedCtxId, setExpandedCtxId] = useState<string | null>(null)
+  const [activityLog, setActivityLog]      = useState<ActivityEntry[]>([])
+  const [description, setDescription]      = useState('')
   const titleRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -182,6 +219,36 @@ export default function TaskDrawer({
     setExpandedCtxId(null)
     setConfirmDeleteLinkId(null)
   }, [task.id])
+
+  useEffect(() => {
+    const detailsCard = contextCards.find((c) => c.parentTaskId === task.id && c.relationType === 'details')
+    setDescription(detailsCard?.question ?? '')
+  }, [task.id, contextCards])
+
+  useEffect(() => {
+    supabase
+      .from('activity_log')
+      .select('id, action, payload, created_at')
+      .eq('task_id', task.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setActivityLog((data as ActivityEntry[]) ?? []))
+  }, [task.id])
+
+  async function logActivity(action: string, payload?: Record<string, unknown>) {
+    const { data } = await supabase.from('activity_log').insert({
+      task_id:  task.id,
+      actor_id: currentUserId,
+      action,
+      payload:  payload ?? null,
+    }).select('id, action, payload, created_at').single()
+    if (data) setActivityLog((prev) => [data as ActivityEntry, ...prev])
+  }
+
+  async function saveDescription(val: string) {
+    const detailsCard = contextCards.find((c) => c.parentTaskId === task.id && c.relationType === 'details')
+    if (!detailsCard) return
+    await supabase.from('tasks').update({ question: val }).eq('id', detailsCard.id)
+  }
 
   useEffect(() => {
     async function load() {
@@ -213,24 +280,33 @@ export default function TaskDrawer({
     if (!trimmed || trimmed === task.title) return
     await supabase.from('tasks').update({ title: trimmed }).eq('id', task.id)
     onUpdate({ title: trimmed })
+    logActivity('title_edited')
   }
 
   async function saveStatus(val: Exclude<TaskStatus, 'context'>) {
+    const prev = status
     setStatus(val)
     await supabase.from('tasks').update({ status: val }).eq('id', task.id)
     onUpdate({ status: val })
+    logActivity('status_changed', { from: prev, to: val })
   }
 
   async function savePriority(val: TaskPriority) {
+    const prev = priority
     setPriority(val)
     await supabase.from('tasks').update({ priority: val }).eq('id', task.id)
     onUpdate({ priority: val })
+    logActivity('priority_changed', { from: prev, to: val })
   }
 
   async function saveDueDate(val: string) {
+    const prev = dueDate
     setDueDate(val)
     await supabase.from('tasks').update({ due_date: val || null }).eq('id', task.id)
     onUpdate({ dueDate: val || undefined })
+    if (val && !prev) logActivity('due_date_set', { to: val })
+    else if (!val && prev) logActivity('due_date_cleared')
+    else if (val) logActivity('due_date_set', { to: val })
   }
 
   async function saveAssignee(val: string) {
@@ -238,6 +314,8 @@ export default function TaskDrawer({
     await supabase.from('tasks').update({ assignee_id: val || null }).eq('id', task.id)
     const user = users.find((u) => u.id === val)
     onUpdate({ assignee: user ? { id: user.id, name: user.displayName, color: user.avatarColor } : undefined })
+    if (val && user) logActivity('assigned', { name: user.displayName })
+    else logActivity('unassigned')
   }
 
   async function toggleLabel(labelId: string) {
@@ -259,8 +337,9 @@ export default function TaskDrawer({
   function submitContext() {
     if (!newQuestion.trim()) return
     onAddContext(newQuestion.trim(), newRelType)
+    logActivity(newRelType === 'question' ? 'question_added' : 'comment_added')
     setNewQuestion('')
-    setNewRelType('details')
+    setNewRelType('question')
     setAddingContext(false)
   }
 
@@ -357,6 +436,32 @@ export default function TaskDrawer({
             </div>
           </div>
 
+          {/* Details card — description + activity log */}
+          <div className={styles.detailsPanel}>
+            <span className={styles.detailsPanelLabel}>Details</span>
+            <textarea
+              className={styles.descriptionInput}
+              placeholder="Add a description…"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onBlur={(e) => saveDescription(e.target.value)}
+              rows={3}
+            />
+            <div className={styles.activityLog}>
+              <span className={styles.activityLogLabel}>Activity</span>
+              {activityLog.length === 0 ? (
+                <p className={styles.activityEmpty}>No activity yet.</p>
+              ) : (
+                activityLog.map((entry) => (
+                  <div key={entry.id} className={styles.activityEntry}>
+                    <span className={styles.activityText}>{formatActivity(entry)}</span>
+                    <span className={styles.activityTime}>{timeAgo(entry.created_at)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
           {/* Context */}
           <div className={styles.contextSection}>
             <div className={styles.contextSectionHeader}>
@@ -372,7 +477,7 @@ export default function TaskDrawer({
               )}
             </div>
 
-            {contextCards.map((card) => {
+            {contextCards.filter((c) => c.relationType !== 'details').map((card) => {
               const isExpanded = expandedCtxId === card.id
               return (
                 <div key={card.id}>
@@ -432,7 +537,7 @@ export default function TaskDrawer({
                 </div>
                 <textarea
                   className={styles.contextQuestionInput}
-                  placeholder="What needs to be noted or clarified?"
+                  placeholder={newRelType === 'question' ? 'State what you want to find out…' : 'Add a note or comment…'}
                   value={newQuestion}
                   onChange={(e) => setNewQuestion(e.target.value)}
                   onKeyDown={(e) => {
@@ -449,7 +554,7 @@ export default function TaskDrawer({
               </div>
             )}
 
-            {contextCards.length === 0 && !addingContext && (
+            {contextCards.filter((c) => c.relationType !== 'details').length === 0 && !addingContext && (
               <p className={styles.contextEmpty}>No context yet.</p>
             )}
           </div>

@@ -144,7 +144,7 @@
   flex-direction: column;
   flex: 1;
   min-width: 250px;
-  max-width: 310px;
+  max-width: 440px;
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--color-bg) 96%, var(--col-accent, transparent) 4%);
   overflow: hidden;
@@ -186,7 +186,46 @@
 /* Context column */
 .contextColumn {
   min-width: 270px;
-  max-width: 330px;
+  max-width: 460px;
+}
+
+/* Collapsed backlog */
+.columnCollapsed {
+  flex: none;
+  min-width: 44px;
+  max-width: 44px;
+  width: 44px;
+  cursor: pointer;
+}
+
+.columnCollapsed .columnHeader {
+  height: 100%;
+  padding: 14px 0;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+  border-bottom: none;
+}
+
+.columnCollapsed .columnLabel {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: 0.1em;
+}
+
+.columnCollapsed .columnBody {
+  display: none;
+}
+
+/* Clickable column header (backlog toggle) */
+.columnHeaderClickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.columnHeaderClickable:hover {
+  background: color-mix(in srgb, var(--col-accent, var(--color-surface)) 22%, var(--color-surface) 78%);
 }
 
 /* ── Column header ───────────────────────────────────── */
