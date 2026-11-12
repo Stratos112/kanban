@@ -6,12 +6,14 @@ interface AuthState {
   userId: string | null
   profile: Profile | null
   loading: boolean
+  setProfile: (p: Profile) => void
 }
 
 const AuthContext = createContext<AuthState>({
   userId: null,
   profile: null,
   loading: true,
+  setProfile: () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -23,14 +25,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     ensureGuestSession()
-      .then(({ userId, profile }) => setState({ userId, profile, loading: false }))
+      .then(({ userId, profile }) => setState((s) => ({ ...s, userId, profile, loading: false })))
       .catch((err) => {
         console.error('Auth failed:', err)
-        setState({ userId: null, profile: null, loading: false })
+        setState((s) => ({ ...s, userId: null, profile: null, loading: false }))
       })
   }, [])
 
-  return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>
+  const setProfile = (p: Profile) => setState((s) => ({ ...s, profile: p }))
+
+  return <AuthContext.Provider value={{ ...state, setProfile }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

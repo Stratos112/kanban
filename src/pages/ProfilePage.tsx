@@ -1,19 +1,58 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabase'
 import styles from './ProfilePage.module.css'
 
+const PALETTE = [
+  '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
+  '#f97316', '#eab308', '#22c55e', '#14b8a6',
+  '#3b82f6', '#06b6d4',
+]
+
 export default function ProfilePage() {
-  const { profile, userId, loading } = useAuth()
+  const { profile, userId, loading, setProfile } = useAuth()
   const [name, setName] = useState('')
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null)
+  const avatarRef = useRef<HTMLDivElement>(null)
+  const pickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (profile) setName(profile.display_name)
   }, [profile])
 
+  useEffect(() => {
+    if (!pickerOpen) return
+    function onDown(e: MouseEvent) {
+      const target = e.target as Node
+      if (
+        pickerRef.current && !pickerRef.current.contains(target) &&
+        avatarRef.current && !avatarRef.current.contains(target)
+      ) {
+        setPickerOpen(false)
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setPickerOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [pickerOpen])
+
   async function saveName() {
     if (!userId || !name.trim() || name === profile?.display_name) return
     await supabase.from('profiles').update({ display_name: name.trim() }).eq('id', userId)
+  }
+
+  async function pickColor(color: string) {
+    if (!userId || !profile) return
+    setProfile({ ...profile, avatar_color: color })
+    setPickerOpen(false)
+    await supabase.from('profiles').update({ avatar_color: color }).eq('id', userId)
   }
 
   return (
@@ -29,11 +68,49 @@ export default function ProfilePage() {
             <p className={styles.empty}>Loading…</p>
           ) : (
             <div className={styles.identity}>
-              <div
-                className={styles.avatar}
-                style={{ background: profile?.avatar_color ?? '#6366f1' }}
-                aria-label="Avatar color"
-              />
+              <div className={styles.avatarWrap}>
+                <div
+                  ref={avatarRef}
+                  className={styles.avatar}
+                  style={{ background: profile?.avatar_color ?? '#6366f1' }}
+                  aria-label="Pick avatar color"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    if (pickerOpen) { setPickerOpen(false); return }
+                    const rect = avatarRef.current?.getBoundingClientRect()
+                    if (rect) setPickerPos({ top: rect.bottom + 10, left: rect.left + rect.width / 2 })
+                    setPickerOpen(true)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      const rect = avatarRef.current?.getBoundingClientRect()
+                      if (rect) setPickerPos({ top: rect.bottom + 10, left: rect.left + rect.width / 2 })
+                      setPickerOpen((o) => !o)
+                    }
+                  }}
+                />
+                {pickerOpen && pickerPos && (
+                  <div
+                    ref={pickerRef}
+                    className={styles.picker}
+                    style={{ top: pickerPos.top, left: pickerPos.left }}
+                  >
+                    {PALETTE.map((c) => (
+                      <button
+                        key={c}
+                        className={styles.swatch}
+                        style={{ background: c }}
+                        aria-label={c}
+                        aria-pressed={profile?.avatar_color === c}
+                        onClick={() => pickColor(c)}
+                      >
+                        {profile?.avatar_color === c && <span className={styles.swatchCheck}>✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className={styles.nameWrap}>
                 <label className={styles.fieldLabel} htmlFor="display-name">
                   Display name
