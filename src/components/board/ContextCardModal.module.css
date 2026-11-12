@@ -305,19 +305,22 @@
   border: 1px solid color-mix(in srgb, var(--color-col-context, #f472b6) 30%, transparent);
 }
 
-.activityLog {
-  margin-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
 .activityLogLabel {
+  display: block;
+  margin-top: 14px;
+  margin-bottom: 6px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-subtle);
-  margin-bottom: 6px;
+}
+.activityLog {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
 }
 .activityEntry {
   display: flex;

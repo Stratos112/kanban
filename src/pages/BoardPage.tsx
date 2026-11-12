@@ -743,6 +743,12 @@ export default function BoardPage() {
 
     if (statusChanged) {
       updates.push(supabase.from('tasks').update({ status: activeTask.status }).eq('id', activeTaskId))
+      updates.push(supabase.from('activity_log').insert({
+        task_id:  activeTaskId,
+        actor_id: userId ?? null,
+        action:   'status_changed',
+        payload:  { from: originalTask?.status, to: activeTask.status },
+      }))
     }
 
     finalTasks.filter((t) => t.status === activeTask.status).forEach((t, i) => {

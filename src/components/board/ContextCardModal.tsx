@@ -240,19 +240,21 @@ export default function ContextCardModal({ card, parentTask, onClose, onUpdate }
             </div>
           )}
           {isDetails && (
-            <div className={styles.activityLog}>
+            <>
               <span className={styles.activityLogLabel}>Activity</span>
-              {activityLog.length === 0 ? (
-                <p className={styles.activityEmpty}>No activity yet.</p>
-              ) : (
-                activityLog.map((entry) => (
-                  <div key={entry.id} className={styles.activityEntry}>
-                    <span className={styles.activityText}>{formatActivity(entry)}</span>
-                    <span className={styles.activityTime}>{timeAgo(entry.created_at)}</span>
-                  </div>
-                ))
-              )}
-            </div>
+              <div className={styles.activityLog}>
+                {activityLog.length === 0 ? (
+                  <p className={styles.activityEmpty}>No activity yet.</p>
+                ) : (
+                  activityLog.map((entry) => (
+                    <div key={entry.id} className={styles.activityEntry}>
+                      <span className={styles.activityText}>{formatActivity(entry)}</span>
+                      <span className={styles.activityTime}>{timeAgo(entry.created_at)}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           )}
         </div>
 
