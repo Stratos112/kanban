@@ -1,11 +1,29 @@
 export type TaskType = 'task' | 'context'
 export type TaskStatus = 'backlog' | 'ready' | 'in_progress' | 'in_review' | 'completed' | 'context'
 export type TaskPriority = 'low' | 'normal' | 'high'
-export type RelationshipType = 'blocked_by' | 'waiting_on' | 'subtask' | 'details'
+export type RelationshipType = 'blocks' | 'blocked_by' | 'parent_of' | 'child_of' | 'waiting_on' | 'completes' | 'subtask' | 'details'
 
 export interface Database {
   public: {
     Tables: {
+      boards: {
+        Row: {
+          id:          string
+          name:        string
+          invite_code: string
+          created_at:  string
+        }
+        Insert: {
+          id?:          string
+          name?:        string
+          invite_code:  string
+          created_at?:  string
+        }
+        Update: {
+          name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           id: string
@@ -40,6 +58,10 @@ export interface Database {
           position: number
           assignee_id: string | null
           user_id: string
+          board_id: string | null
+          parent_task_id: string | null
+          context_relation_type: string | null
+          parent_link_type: string | null
           created_at: string
           updated_at: string
         }
@@ -56,6 +78,10 @@ export interface Database {
           position?: number
           assignee_id?: string | null
           user_id: string
+          board_id?: string | null
+          parent_task_id?: string | null
+          context_relation_type?: string | null
+          parent_link_type?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -70,6 +96,8 @@ export interface Database {
           due_date?: string | null
           position?: number
           assignee_id?: string | null
+          context_relation_type?: string | null
+          parent_link_type?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -78,6 +106,7 @@ export interface Database {
         Row: {
           id: string
           user_id: string
+          board_id: string
           name: string
           color: string
           created_at: string
@@ -85,6 +114,7 @@ export interface Database {
         Insert: {
           id?: string
           user_id: string
+          board_id: string
           name: string
           color?: string
           created_at?: string
@@ -154,6 +184,7 @@ export interface Database {
 }
 
 // Convenience row types
+export type Board   = Database['public']['Tables']['boards']['Row']
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Task = Database['public']['Tables']['tasks']['Row']
 export type Label = Database['public']['Tables']['labels']['Row']

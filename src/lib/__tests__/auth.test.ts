@@ -1,33 +1,41 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Must be declared before the module under test is imported so Vitest hoists it
-vi.mock('../supabase', () => {
-  const insertMock = vi.fn()
-  const fromMock = vi.fn(() => ({ insert: insertMock }))
-  const getSessionMock = vi.fn()
-  const signInAnonymouslyMock = vi.fn()
-
-  return {
-    supabase: {
-      auth: {
-        getSession: getSessionMock,
-        signInAnonymously: signInAnonymouslyMock,
-      },
-      from: fromMock,
+vi.mock('../supabase', () => ({
+  supabase: {
+    auth: {
+      getSession:        vi.fn(),
+      signInAnonymously: vi.fn(),
     },
-  }
-})
+    from: vi.fn(),
+  },
+}))
 
 import { ensureGuestSession } from '../auth'
 import { supabase } from '../supabase'
 
 const mockGetSession = vi.mocked(supabase.auth.getSession)
-const mockSignIn = vi.mocked(supabase.auth.signInAnonymously)
-const mockFrom = vi.mocked(supabase.from)
+const mockSignIn     = vi.mocked(supabase.auth.signInAnonymously)
+const mockFrom       = vi.mocked(supabase.from)
 
+const MOCK_PROFILE = {
+  id:           'user-123',
+  display_name: 'guest_BravePenguin',
+  avatar_color: '#6366f1',
+  created_at:   new Date().toISOString(),
+}
 const MOCK_SESSION = { user: { id: 'user-123' }, access_token: 'tok' } as never
-const MOCK_USER = { id: 'user-123' }
+const MOCK_USER    = { id: 'user-123' }
 
+// Sets up mockFrom to handle .select().eq().single() returning profileData
+function mockSelectChain(profileData: object | null) {
+  const single = vi.fn().mockResolvedValue({ data: profileData, error: null })
+  const eq     = vi.fn().mockReturnValue({ single })
+  const select = vi.fn().mockReturnValue({ eq })
+  mockFrom.mockReturnValue({ select } as never)
+}
+
+// Sets up mockFrom to handle .insert() succeeding; returns the insert spy
 function mockInsert() {
   const insert = vi.fn().mockResolvedValue({ error: null })
   mockFrom.mockReturnValue({ insert } as never)
@@ -41,10 +49,11 @@ beforeEach(() => {
 describe('ensureGuestSession', () => {
   it('returns the existing session without signing in again', async () => {
     mockGetSession.mockResolvedValue({ data: { session: MOCK_SESSION } } as never)
+    mockSelectChain(MOCK_PROFILE)
 
     const result = await ensureGuestSession()
 
-    expect(result).toBe(MOCK_SESSION)
+    expect(result).toEqual({ userId: 'user-123', profile: MOCK_PROFILE })
     expect(mockSignIn).not.toHaveBeenCalled()
   })
 
@@ -74,8 +83,8 @@ describe('ensureGuestSession', () => {
     expect(mockFrom).toHaveBeenCalledWith('profiles')
     expect(insert).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: MOCK_USER.id,
-        display_name: 'Guest',
+        id:           MOCK_USER.id,
+        display_name: expect.stringMatching(/^guest_[A-Z][a-z]+[A-Z][a-z]+$/),
         avatar_color: expect.stringMatching(/^#[0-9a-f]{6}$/i),
       })
     )
@@ -110,7 +119,10 @@ describe('ensureGuestSession', () => {
 
     const result = await ensureGuestSession()
 
-    expect(result).toBe(MOCK_SESSION)
+    expect(result).toEqual(expect.objectContaining({
+      userId:  'user-123',
+      profile: expect.objectContaining({ id: 'user-123' }),
+    }))
   })
 
   it('throws when signInAnonymously returns an error', async () => {

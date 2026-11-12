@@ -254,3 +254,20 @@
   padding: 24px 0;
   opacity: 0.6;
 }
+
+/* ── Drag & drop ─────────────────────────────────────── */
+.columnDragTarget {
+  background: color-mix(in srgb, var(--color-bg) 90%, var(--col-accent, transparent) 10%);
+}
+
+.columnBodyTarget {
+  outline: 1.5px dashed color-mix(in srgb, var(--col-accent, var(--color-border)) 55%, transparent);
+  outline-offset: -4px;
+  border-radius: var(--radius-md);
+}
+
+.dragOverlay {
+  transform: rotate(1.5deg);
+  filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}

@@ -1,0 +1,898 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 199;
+  animation: fadeIn 0.18s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 400px;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  box-shadow: -24px 0 64px rgba(0, 0, 0, 0.55);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* ── Header ─────────────────────────────────────────── */
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  height: 52px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
+  background:
+    linear-gradient(
+      115deg,
+      transparent 55%,
+      rgba(210,220,240,0.05) 58%,
+      rgba(210,220,240,0.05) 60%,
+      transparent 62%,
+      rgba(210,220,240,0.11) 66%,
+      rgba(210,220,240,0.11) 69%,
+      transparent 72%,
+      rgba(210,220,240,0.05) 74%,
+      rgba(210,220,240,0.05) 76%,
+      transparent 79%
+    ),
+    var(--color-surface);
+}
+
+.refKey {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--color-text-subtle);
+}
+
+.closeBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-subtle);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, color 0.1s;
+}
+
+.closeBtn:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+/* ── Body ────────────────────────────────────────────── */
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 22px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Editable title ──────────────────────────────────── */
+.title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  width: 100%;
+  overflow: hidden;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: var(--radius-sm);
+  transition: background 0.1s;
+}
+
+.title:hover {
+  background: color-mix(in srgb, var(--color-surface-raised) 60%, transparent);
+}
+
+.title:focus {
+  background: var(--color-surface-raised);
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+/* ── Metadata rows ───────────────────────────────────── */
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.metaRow:last-child {
+  border-bottom: none;
+}
+
+.metaLabel {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-subtle);
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.metaSelect,
+.metaDate {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  transition: background 0.1s;
+  flex: 1;
+}
+
+.metaSelect:hover,
+.metaDate:hover {
+  background: var(--color-surface-raised);
+}
+
+.metaSelect:focus,
+.metaDate:focus {
+  background: var(--color-surface-raised);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.metaSelect option {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.metaDate::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
+}
+
+/* ── Context section ─────────────────────────────────── */
+.contextSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contextSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.contextSectionTitle {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.addContextBtn {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.1s;
+}
+.addContextBtn:hover { opacity: 1; }
+
+.contextEmpty {
+  font-size: 12px;
+  color: var(--color-text-subtle);
+  margin: 0;
+  opacity: 0.6;
+}
+
+.contextCardRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.contextCardLink {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.contextCardLink:hover > * {
+  box-shadow: var(--shadow-md), 0 0 0 1px color-mix(in srgb, var(--color-col-context) 40%, var(--color-border));
+}
+
+.expandBtn {
+  flex-shrink: 0;
+  margin-top: 4px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+.expandBtn:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-subtle);
+}
+.expandBtn svg {
+  transition: transform 0.18s;
+}
+.expandBtnOpen svg {
+  transform: rotate(180deg);
+}
+
+.contextExpandedBody {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 20%, var(--color-border));
+  background: color-mix(in srgb, var(--color-col-context) 5%, var(--color-surface));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.expandedText {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.expandedAnswerLabel {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.expandedAnswer {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Individual context card (legacy — kept for add-context form) */
+.contextCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-surface-raised) 60%, transparent);
+}
+
+.contextCardTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.contextTypeSelect {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-col-context);
+  background: color-mix(in srgb, var(--color-col-context) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 30%, transparent);
+  border-radius: 999px;
+  padding: 2px 8px 2px 8px;
+  outline: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  appearance: none;
+}
+
+.contextQuestion {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1.45;
+  flex: 1;
+  padding-top: 1px;
+}
+
+.contextCardMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.contextMetaSelect {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%23768390' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 6px center / 9px,
+    transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px 20px 2px 8px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  transition: background-color 0.1s, border-color 0.1s;
+}
+.contextMetaSelect:hover {
+  background-color: var(--color-surface-raised);
+  border-color: var(--color-text-subtle);
+}
+.contextMetaSelect option {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.contextCardLabels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 2px;
+}
+
+.contextAnswer {
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  resize: none;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+.contextAnswer::placeholder { color: var(--color-text-subtle); opacity: 0.6; }
+.contextAnswer:focus { color: var(--color-text); }
+
+/* Add context form */
+.addContextForm {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-surface-raised) 60%, transparent);
+}
+
+.addContextRow {
+  padding: 10px 12px 0;
+}
+
+.contextQuestionInput {
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text);
+  resize: none;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+.contextQuestionInput::placeholder { color: var(--color-text-subtle); }
+
+.addContextActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 10px 10px;
+}
+
+.cancelContextBtn {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.1s, background 0.1s;
+}
+.cancelContextBtn:hover { color: var(--color-text); background: var(--color-surface-raised); }
+
+.submitContextBtn {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  border: none;
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.1s;
+}
+.submitContextBtn:hover:not(:disabled) { filter: brightness(1.1); }
+.submitContextBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Linked tasks section ────────────────────────────── */
+.linkedSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.linkedSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionTitle {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.linkedEmpty {
+  font-size: 12px;
+  color: var(--color-text-subtle);
+  margin: 0;
+  opacity: 0.6;
+}
+
+.linkedList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.linkedItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+}
+
+.linkedType {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-col-context);
+  background: color-mix(in srgb, var(--color-col-context) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-col-context) 28%, transparent);
+  border-radius: 999px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.linkedTarget {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-subtle);
+}
+
+.linkedTitle {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.linkedItemQuestion {
+  cursor: pointer;
+  border-color: color-mix(in srgb, #e879f9 22%, var(--color-border));
+  background: color-mix(in srgb, #e879f9 5%, var(--color-surface-raised));
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.linkedItemQuestion:hover {
+  border-color: color-mix(in srgb, #e879f9 42%, var(--color-border));
+  background: color-mix(in srgb, #e879f9 10%, var(--color-surface-raised));
+}
+
+.linkedTypeQuestion {
+  color: #e879f9;
+  background: color-mix(in srgb, #e879f9 12%, transparent);
+  border-color: color-mix(in srgb, #e879f9 28%, transparent);
+}
+
+.linkedQuestionText {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.linkedDeleteBtn {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--color-text-subtle);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  padding: 0 2px;
+  border-radius: 4px;
+  transition: opacity 0.12s, color 0.12s;
+}
+
+.linkedItem:hover .linkedDeleteBtn {
+  opacity: 0.5;
+}
+
+.linkedDeleteBtn:hover {
+  opacity: 1 !important;
+  color: var(--color-danger);
+}
+
+.linkedDeleteConfirm {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.linkedDeleteAsk {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.linkedDeleteYes,
+.linkedDeleteNo {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid;
+}
+
+.linkedDeleteYes {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-danger) 25%, transparent);
+}
+
+.linkedDeleteYes:hover {
+  background: color-mix(in srgb, var(--color-danger) 20%, transparent);
+}
+
+.linkedDeleteNo {
+  color: var(--color-text-muted);
+  background: transparent;
+  border-color: var(--color-border);
+}
+
+.linkedDeleteNo:hover {
+  background: var(--color-surface-raised);
+}
+
+/* ── Connect section ─────────────────────────────────── */
+.connectSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface-raised) 50%, transparent);
+  border: 1px solid var(--color-border);
+}
+
+.linkTypeGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.linkTypeBtn {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+
+.linkTypeBtn:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+  border-color: var(--color-text-subtle);
+}
+
+.linkTypeBtnActive {
+  color: var(--color-col-context);
+  background: color-mix(in srgb, var(--color-col-context) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-col-context) 40%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-col-context) 20%, transparent);
+}
+
+.linkTypeBtnActive:hover {
+  color: var(--color-col-context);
+  background: color-mix(in srgb, var(--color-col-context) 18%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-col-context) 55%, transparent);
+}
+
+.selectTaskBtn {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-col-context);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 7px 14px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: filter 0.15s;
+}
+
+.selectTaskBtn:hover {
+  filter: brightness(1.1);
+}
+
+/* ── Delete zone ─────────────────────────────────────── */
+.deleteZone {
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.deleteBtn {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-danger);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 38%, var(--color-border));
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.deleteBtn:hover {
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  border-color: var(--color-danger);
+}
+
+.deleteConfirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.deleteWarning {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--color-danger);
+}
+
+.deleteActions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.deleteCancelBtn {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.1s, background 0.1s;
+}
+.deleteCancelBtn:hover { color: var(--color-text); background: var(--color-surface-raised); }
+
+.deleteConfirmBtn {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-danger);
+  border: none;
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.1s;
+}
+.deleteConfirmBtn:hover { filter: brightness(1.15); }
+
+/* ── Label picker ────────────────────────────────────── */
+.labelPicker {
+  position: relative;
+  flex: 1;
+}
+
+.labelTrigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+  min-height: 26px;
+}
+
+.labelTrigger:hover,
+.labelTriggerOpen {
+  background: var(--color-surface-raised);
+}
+
+.labelPlaceholder {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text-subtle);
+  flex: 1;
+}
+
+.labelChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+
+.labelChip {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: color-mix(in srgb, #fff 65%, var(--label-color, #cdd9e5) 35%);
+  background: color-mix(in srgb, var(--label-color, #2e3d52) 22%, var(--color-surface-raised) 78%);
+  border: 1px solid color-mix(in srgb, var(--label-color, rgba(99,130,180)) 38%, transparent 62%);
+}
+
+.chevron {
+  color: var(--color-text-subtle);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.chevronUp { transform: rotate(180deg); }
+
+.labelDropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  overflow: hidden;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.labelOption {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.labelOption:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+
+.labelOptionActive { color: var(--color-text); }
+
+.labelDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.check {
+  margin-left: auto;
+  color: var(--color-accent);
+}
+
+.labelEmpty {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--color-text-subtle);
+  text-align: center;
+}

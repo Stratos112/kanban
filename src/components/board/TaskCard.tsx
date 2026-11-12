@@ -4,6 +4,7 @@ import styles from './TaskCard.module.css'
 export interface TaskCardProps {
   refKey: number
   type: 'task' | 'context'
+  relationType?: string
   title?: string | null
   question?: string | null
   answer?: string | null
@@ -12,11 +13,20 @@ export interface TaskCardProps {
   labels?: { name: string; color?: string }[]
   assigneeColor?: string | null
   assigneeName?: string | null
+  parentRefKey?: number
+  parentTitle?: string
+  blockedCount?: number
+  waitingCount?: number
+  isParent?: boolean
+  isWaitingOnTask?: boolean
+  isSelectable?: boolean
+  onSelect?: () => void
 }
 
 export default function TaskCard({
   refKey,
   type,
+  relationType,
   title,
   question,
   answer,
@@ -25,18 +35,65 @@ export default function TaskCard({
   labels = [],
   assigneeColor,
   assigneeName,
+  parentRefKey,
+  parentTitle,
+  blockedCount = 0,
+  waitingCount = 0,
+  isParent = false,
+  isWaitingOnTask = false,
+  isSelectable,
+  onSelect,
 }: TaskCardProps) {
-  const isContext = type === 'context'
+  const isContext        = type === 'context'
+  const isQuestion       = isContext && relationType === 'question'
+  const isAnswered       = isQuestion && !!answer
+  const isBand           = isContext && (!isQuestion || isAnswered)
+  const isBlocked        = blockedCount > 0
+  const isWaiting        = !isBlocked && waitingCount > 0
 
-  return (
+  /* ── Narrow band for details / assumption / answered questions ── */
+  if (isBand) {
+    return (
+      <div className={[
+        styles.card,
+        styles.contextCard,
+        styles.contextBand,
+        isAnswered ? styles.answeredQuestion : '',
+      ].filter(Boolean).join(' ')}>
+        <div className={styles.bandRow}>
+          <span className={styles.bandType}>{relationType ?? 'details'}</span>
+          <span className={styles.bandTitle}>{isAnswered ? (question || title || '—') : (parentTitle || title || '—')}</span>
+          <span className={styles.refKey}>
+            KAN-{refKey}
+            {parentRefKey != null && <span className={styles.parentLink}> → KAN-{parentRefKey}</span>}
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Full card for tasks and questions ── */
+  const cardEl = (
     <div
-      className={`${styles.card} ${isContext ? styles.contextCard : ''} ${priority ? styles[`priority_${priority}`] : ''}`}
+      className={[
+        styles.card,
+        isContext ? styles.contextCard : '',
+        isQuestion && !isAnswered ? styles.questionUnanswered : '',
+        priority ? styles[`priority_${priority}`] : '',
+        isBlocked ? styles.isBlocked : isWaiting ? styles.isWaiting : '',
+        isSelectable ? styles.selectable : '',
+        isWaitingOnTask ? styles.hasZzz : '',
+      ].filter(Boolean).join(' ')}
+      onClick={isSelectable ? onSelect : undefined}
     >
       <div className={styles.header}>
         <span className={styles.refKey}>
-          {isContext ? '?' : ''}KAN-{refKey}
+          KAN-{refKey}
+          {isContext && parentRefKey != null && (
+            <span className={styles.parentLink}> → KAN-{parentRefKey}</span>
+          )}
         </span>
-        {!isContext && priority && (
+        {priority && (
           <span className={styles.priorityWell}>
             <span className={`${styles.priorityBadge} ${styles[`badge_${priority}`]}`}>
               {priority}
@@ -48,11 +105,10 @@ export default function TaskCard({
       <div className={styles.body}>
         {isContext ? (
           <>
-            <p className={styles.question}>{question}</p>
-            {answer
-              ? <p className={styles.answer}>{answer}</p>
-              : <span className={styles.unanswered}>Unanswered</span>
-            }
+            {title && <p className={styles.contextTitle}>{title}</p>}
+            {question && <p className={styles.question}>{question}</p>}
+            {isQuestion && answer && <p className={styles.answer}>{answer}</p>}
+            {isQuestion && !answer && <span className={styles.unanswered}>Unanswered</span>}
           </>
         ) : (
           <p className={styles.title}>{title}</p>
@@ -70,6 +126,16 @@ export default function TaskCard({
               {l.name}
             </span>
           ))}
+          {blockedCount > 0 && (
+            <span className={`${styles.statusChip} ${styles.blockerChip}`}>
+              {blockedCount} blocker{blockedCount > 1 ? 's' : ''}
+            </span>
+          )}
+          {waitingCount > 0 && (
+            <span className={`${styles.statusChip} ${styles.waitingChip}`}>
+              waiting on {waitingCount}
+            </span>
+          )}
         </div>
         <div className={styles.meta}>
           {dueDate && (
@@ -86,6 +152,16 @@ export default function TaskCard({
           )}
         </div>
       </div>
+    </div>
+  )
+
+  if (!isParent) return cardEl
+
+  return (
+    <div className={styles.stackWrapper}>
+      <div className={styles.stackLayer2} aria-hidden />
+      <div className={styles.stackLayer1} aria-hidden />
+      {cardEl}
     </div>
   )
 }

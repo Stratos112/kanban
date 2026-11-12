@@ -29,8 +29,12 @@ const TASK_STATUSES: TaskStatus[] = [
 const TASK_PRIORITIES: TaskPriority[] = ['low', 'normal', 'high']
 
 const RELATIONSHIP_TYPES: RelationshipType[] = [
+  'blocks',
   'blocked_by',
+  'parent_of',
+  'child_of',
   'waiting_on',
+  'completes',
   'subtask',
   'details',
 ]
@@ -75,13 +79,17 @@ describe('TaskPriority', () => {
 })
 
 describe('RelationshipType', () => {
-  it('has exactly four variants', () => {
-    expect(RELATIONSHIP_TYPES).toHaveLength(4)
+  it('has eight variants', () => {
+    expect(RELATIONSHIP_TYPES).toHaveLength(8)
   })
 
   it('includes all directional relationship types', () => {
+    expect(RELATIONSHIP_TYPES).toContain('blocks')
     expect(RELATIONSHIP_TYPES).toContain('blocked_by')
+    expect(RELATIONSHIP_TYPES).toContain('parent_of')
+    expect(RELATIONSHIP_TYPES).toContain('child_of')
     expect(RELATIONSHIP_TYPES).toContain('waiting_on')
+    expect(RELATIONSHIP_TYPES).toContain('completes')
     expect(RELATIONSHIP_TYPES).toContain('subtask')
     expect(RELATIONSHIP_TYPES).toContain('details')
   })
@@ -103,6 +111,10 @@ describe('Row type shapes', () => {
       position: 0,
       assignee_id: null,
       user_id: 'user-uuid',
+      board_id: null,
+      parent_task_id: null,
+      context_relation_type: null,
+      parent_link_type: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
@@ -125,6 +137,10 @@ describe('Row type shapes', () => {
       position: 0,
       assignee_id: null,
       user_id: 'user-uuid',
+      board_id: null,
+      parent_task_id: null,
+      context_relation_type: null,
+      parent_link_type: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
@@ -148,6 +164,7 @@ describe('Row type shapes', () => {
     const label: Label = {
       id: 'label-uuid',
       user_id: 'user-uuid',
+      board_id: 'board-uuid',
       name: 'Bug',
       color: '#f43f5e',
       created_at: new Date().toISOString(),
@@ -159,9 +176,9 @@ describe('Row type shapes', () => {
     const rel: TaskRelationship = {
       id: 'rel-uuid',
       from_task_id: 'task-a',
-      to_task_id: 'task-b',
-      type: 'blocked_by',
-      created_at: new Date().toISOString(),
+      to_task_id:   'task-b',
+      type:         'blocked_by',
+      created_at:   new Date().toISOString(),
     }
     expect(rel.type).toBe('blocked_by')
   })
@@ -193,6 +210,10 @@ describe('Row type shapes', () => {
       position: 1,
       assignee_id: 'user-uuid',
       user_id: 'user-uuid',
+      board_id: null,
+      parent_task_id: null,
+      context_relation_type: null,
+      parent_link_type: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       assignee: {

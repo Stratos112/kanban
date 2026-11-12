@@ -1,7 +1,15 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import { renderWithRouter } from '../../test/renderWithRouter'
 import ProfilePage from '../ProfilePage'
+
+vi.mock('../../lib/AuthContext', () => ({
+  useAuth: () => ({
+    profile: { id: 'user-1', display_name: 'Guest', avatar_color: '#6366f1', created_at: '' },
+    userId: 'user-1',
+    loading: false,
+  }),
+}))
 
 describe('ProfilePage', () => {
   it('renders the page title', () => {
