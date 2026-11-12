@@ -1,50 +1,59 @@
 import { describe, it, expect } from 'vitest'
-import { screen } from '@testing-library/react'
-import { renderWithRouter } from '../../../test/renderWithRouter'
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Sidebar from '../Sidebar'
+
+function renderSidebar(initialPath = '/board/test') {
+  render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <Routes>
+        <Route path="/board/:slug/*" element={<Sidebar />} />
+      </Routes>
+    </MemoryRouter>
+  )
+}
 
 describe('Sidebar', () => {
   it('renders all three nav links', () => {
-    renderWithRouter(<Sidebar />)
+    renderSidebar()
     expect(screen.getByRole('link', { name: /board/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /profile/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /review/i })).toBeInTheDocument()
   })
 
-  it('Board link points to /', () => {
-    renderWithRouter(<Sidebar />)
-    expect(screen.getByRole('link', { name: /board/i })).toHaveAttribute('href', '/')
+  it('Board link points to /board/test', () => {
+    renderSidebar()
+    expect(screen.getByRole('link', { name: /board/i })).toHaveAttribute('href', '/board/test')
   })
 
-  it('Profile link points to /profile', () => {
-    renderWithRouter(<Sidebar />)
-    expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile')
+  it('Profile link points to /board/test/profile', () => {
+    renderSidebar()
+    expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/board/test/profile')
   })
 
-  it('Review link points to /review', () => {
-    renderWithRouter(<Sidebar />)
-    expect(screen.getByRole('link', { name: /review/i })).toHaveAttribute('href', '/review')
+  it('Review link points to /board/test/review', () => {
+    renderSidebar()
+    expect(screen.getByRole('link', { name: /review/i })).toHaveAttribute('href', '/board/test/review')
   })
 
   it('renders the logo mark', () => {
-    renderWithRouter(<Sidebar />)
+    renderSidebar()
     expect(screen.getByText('K')).toBeInTheDocument()
   })
 
-  it('marks the Board link active when on /', () => {
-    renderWithRouter(<Sidebar />, { initialPath: '/' })
+  it('marks the Board link active when on /board/test', () => {
+    renderSidebar('/board/test')
     const boardLink = screen.getByRole('link', { name: /board/i })
-    // NavLink adds aria-current="page" when active
     expect(boardLink).toHaveAttribute('aria-current', 'page')
   })
 
-  it('marks the Profile link active when on /profile', () => {
-    renderWithRouter(<Sidebar />, { initialPath: '/profile' })
+  it('marks the Profile link active when on /board/test/profile', () => {
+    renderSidebar('/board/test/profile')
     expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('does not mark Board active when on /profile', () => {
-    renderWithRouter(<Sidebar />, { initialPath: '/profile' })
+  it('does not mark Board active when on /board/test/profile', () => {
+    renderSidebar('/board/test/profile')
     expect(screen.getByRole('link', { name: /board/i })).not.toHaveAttribute('aria-current')
   })
 })
