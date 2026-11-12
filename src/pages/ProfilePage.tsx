@@ -10,7 +10,7 @@ const PALETTE = [
 ]
 
 export default function ProfilePage() {
-  const { profile, userId, loading, setProfile } = useAuth()
+  const { profile, userId, loading, setProfile, hideOthers, setHideOthers } = useAuth()
   const [name, setName] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null)
@@ -128,6 +128,31 @@ export default function ProfilePage() {
               </div>
             </div>
           )}
+        </section>
+
+        <section className={`${styles.focusCard} ${hideOthers ? styles.focusOn : ''}`}>
+          <div className={styles.focusRow}>
+            <div className={styles.focusText}>
+              <span className={styles.focusTitle}>Focus mode</span>
+              <span className={styles.focusDesc}>
+                Hide tasks assigned to other team members. Unassigned tasks and your own tasks always stay visible.
+              </span>
+            </div>
+            <label className={styles.toggleLabel}>
+              <input
+                type="checkbox"
+                className={styles.toggleInput}
+                checked={hideOthers}
+                onChange={(e) => setHideOthers(e.target.checked)}
+              />
+              <span className={styles.toggleTrack}>
+                <span className={styles.toggleThumb} />
+              </span>
+            </label>
+          </div>
+          <span className={`${styles.focusStatus} ${hideOthers ? styles.on : styles.off}`}>
+            {hideOthers ? 'On — showing your tasks only' : 'Off — showing all tasks'}
+          </span>
         </section>
 
         <section className={styles.card}>

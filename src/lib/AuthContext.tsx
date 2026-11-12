@@ -7,6 +7,8 @@ interface AuthState {
   profile: Profile | null
   loading: boolean
   setProfile: (p: Profile) => void
+  hideOthers: boolean
+  setHideOthers: (v: boolean) => void
 }
 
 const AuthContext = createContext<AuthState>({
@@ -14,6 +16,8 @@ const AuthContext = createContext<AuthState>({
   profile: null,
   loading: true,
   setProfile: () => {},
+  hideOthers: true,
+  setHideOthers: () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -21,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     userId: null,
     profile: null,
     loading: true,
+    hideOthers: localStorage.getItem('kanban-hide-others') !== 'false',
   })
 
   useEffect(() => {
@@ -34,7 +39,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const setProfile = (p: Profile) => setState((s) => ({ ...s, profile: p }))
 
-  return <AuthContext.Provider value={{ ...state, setProfile }}>{children}</AuthContext.Provider>
+  const setHideOthers = (v: boolean) => {
+    localStorage.setItem('kanban-hide-others', String(v))
+    setState((s) => ({ ...s, hideOthers: v }))
+  }
+
+  return (
+    <AuthContext.Provider value={{ ...state, setProfile, setHideOthers }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

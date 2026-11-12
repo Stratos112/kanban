@@ -122,7 +122,7 @@ function ColumnBody({
 /* ── Page ────────────────────────────────────────────── */
 export default function BoardPage() {
   const { slug } = useParams<{ slug: string }>()
-  const { userId, loading: authLoading } = useAuth()
+  const { userId, loading: authLoading, hideOthers } = useAuth()
 
   const [boardId, setBoardId]             = useState<string | null>(null)
   const [boardName, setBoardName]         = useState('')
@@ -748,7 +748,12 @@ export default function BoardPage() {
   }
 
   /* ── Render ────────────────────────────────────────── */
-  const tasksInColumn = (status: TaskStatus) => tasks.filter((t) => t.status === status)
+  const tasksInColumn = (status: TaskStatus) =>
+    tasks.filter((t) => {
+      if (t.status !== status) return false
+      if (hideOthers && t.assignee && t.assignee.id !== userId) return false
+      return true
+    })
   const activeTask    = activeId ? tasks.find((t) => t.id === activeId) ?? null : null
   const openTask      = openTaskId ? tasks.find((t) => t.id === openTaskId) ?? null : null
   const isLoading     = authLoading || loadingTasks
