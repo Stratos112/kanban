@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, Cell, LabelList,
 } from 'recharts'
 import { getBoardBySlug } from '../lib/boards'
@@ -17,7 +17,7 @@ interface SummaryData {
   hasOpenTasks: boolean
 }
 
-interface DayPoint { date: string; completed: number; cumulative: number }
+interface TimePoint { date: string; created: number; inProgress: number; completed: number }
 
 interface AssigneePoint {
   name: string
@@ -25,6 +25,12 @@ interface AssigneePoint {
   open: number
   completed: number
 }
+
+type LogEntry = { action: string; payload: unknown; created_at: string }
+
+type Granularity = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month'
+const GRANULARITIES: Granularity[] = ['second', 'minute', 'hour', 'day', 'week', 'month']
+const GRAN_LABELS = ['Second', 'Minute', 'Hour', 'Day', 'Week', 'Month']
 
 /* ── Helpers ─────────────────────────────────────────── */
 function formatDuration(from: string, to: string): string {
@@ -43,6 +49,69 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+function bucketKey(iso: string, gran: Granularity): string {
+  switch (gran) {
+    case 'second': return iso.slice(0, 19)
+    case 'minute': return iso.slice(0, 16)
+    case 'hour':   return iso.slice(0, 13)
+    case 'day':    return iso.slice(0, 10)
+    case 'week': {
+      const d = new Date(iso)
+      const dow = d.getUTCDay()
+      const offset = dow === 0 ? 6 : dow - 1
+      const mon = new Date(d)
+      mon.setUTCDate(d.getUTCDate() - offset)
+      return mon.toISOString().slice(0, 10)
+    }
+    case 'month': return iso.slice(0, 7)
+  }
+}
+
+function fmtBucket(key: string, gran: Granularity): string {
+  switch (gran) {
+    case 'second': return key.slice(11, 19)
+    case 'minute': return key.slice(11, 16)
+    case 'hour': {
+      const d = new Date(key + ':00:00Z')
+      return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${d.getUTCHours()}h`
+    }
+    case 'day':   return fmtDate(key)
+    case 'week':  return `Wk ${fmtDate(key)}`
+    case 'month': return new Date(key + '-01T00:00:00Z').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+  }
+}
+
+function buildTimeData(log: LogEntry[], gran: Granularity): TimePoint[] {
+  const created:    Record<string, number> = {}
+  const inProgress: Record<string, number> = {}
+  const completed:  Record<string, number> = {}
+
+  for (const e of log) {
+    const key = bucketKey(e.created_at, gran)
+    if (e.action === 'task_created') {
+      created[key] = (created[key] ?? 0) + 1
+    } else if (e.action === 'status_changed') {
+      const p = e.payload as Record<string, unknown> | null
+      if (p?.to === 'in_progress') inProgress[key] = (inProgress[key] ?? 0) + 1
+      if (p?.to === 'completed')   completed[key]  = (completed[key]  ?? 0) + 1
+    }
+  }
+
+  const allKeys = [...new Set([
+    ...Object.keys(created),
+    ...Object.keys(inProgress),
+    ...Object.keys(completed),
+  ])].sort()
+
+  let cumCreated = 0, cumInProgress = 0, cumCompleted = 0
+  return allKeys.map((key) => {
+    cumCreated    += created[key]    ?? 0
+    cumInProgress += inProgress[key] ?? 0
+    cumCompleted  += completed[key]  ?? 0
+    return { date: key, created: cumCreated, inProgress: cumInProgress, completed: cumCompleted }
+  })
+}
+
 /* ── Stat card ───────────────────────────────────────── */
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -59,7 +128,9 @@ export default function ReviewPage() {
   const { slug } = useParams<{ slug: string }>()
   const [boardId, setBoardId]           = useState<string | null>(null)
   const [summary, setSummary]           = useState<SummaryData | null>(null)
-  const [dayData, setDayData]           = useState<DayPoint[]>([])
+  const [rawLog, setRawLog]             = useState<LogEntry[]>([])
+  const [timeData, setTimeData]         = useState<TimePoint[]>([])
+  const [granularity, setGranularity]   = useState<Granularity>('day')
   const [assigneeData, setAssigneeData] = useState<AssigneePoint[]>([])
   const [activeTab, setActiveTab]       = useState<'timeline' | 'assignees'>('timeline')
   const [loading, setLoading]           = useState(true)
@@ -73,6 +144,10 @@ export default function ReviewPage() {
     if (!boardId) return
     load(boardId)
   }, [boardId])
+
+  useEffect(() => {
+    setTimeData(buildTimeData(rawLog, granularity))
+  }, [rawLog, granularity])
 
   async function load(id: string) {
     setLoading(true)
@@ -91,7 +166,7 @@ export default function ReviewPage() {
           .select('task_id, action, payload, created_at')
           .in('task_id', taskIds)
           .order('created_at', { ascending: true })
-      : { data: [] as { task_id: string; action: string; payload: unknown; created_at: string }[] }
+      : { data: [] as LogEntry[] }
 
     const assigneeIds = [...new Set((tasks ?? []).filter((t) => t.assignee_id).map((t) => t.assignee_id as string))]
     const { data: profiles } = assigneeIds.length
@@ -101,10 +176,9 @@ export default function ReviewPage() {
     const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]))
 
     /* ── Summary ── */
-    const creations  = (statusLog ?? []).filter((e) => e.action === 'task_created')
-    const completedTasks = (tasks ?? []).filter((t) => t.status === 'completed')
-    const openTasks      = (tasks ?? []).filter((t) => t.status !== 'completed')
-
+    const creations        = (statusLog ?? []).filter((e) => e.action === 'task_created')
+    const completedTasks   = (tasks ?? []).filter((t) => t.status === 'completed')
+    const openTasks        = (tasks ?? []).filter((t) => t.status !== 'completed')
     const completionEvents = (statusLog ?? []).filter((e) => {
       const p = e.payload as Record<string, unknown> | null
       return e.action === 'status_changed' && p?.to === 'completed'
@@ -122,29 +196,7 @@ export default function ReviewPage() {
       hasOpenTasks:   openTasks.length > 0,
     })
 
-    /* ── Completion over time ── */
-    const dayCounts: Record<string, number> = {}
-    for (const e of completionEvents) {
-      const day = (e.created_at as string).slice(0, 10)
-      dayCounts[day] = (dayCounts[day] ?? 0) + 1
-    }
-
-    if (Object.keys(dayCounts).length > 0) {
-      const sorted = Object.keys(dayCounts).sort()
-      const start  = new Date(sorted[0])
-      const end    = new Date()
-      const points: DayPoint[] = []
-      let cumulative = 0
-      for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const key = d.toISOString().slice(0, 10)
-        const completed = dayCounts[key] ?? 0
-        cumulative += completed
-        points.push({ date: key, completed, cumulative })
-      }
-      setDayData(points)
-    } else {
-      setDayData([])
-    }
+    setRawLog((statusLog ?? []) as LogEntry[])
 
     /* ── Work by assignee ── */
     const assigneeMap: Record<string, { open: number; completed: number }> = {}
@@ -169,6 +221,8 @@ export default function ReviewPage() {
   const duration = summary?.firstCreated && summary?.lastEvent
     ? formatDuration(summary.firstCreated, summary.lastEvent)
     : '—'
+
+  const granIdx = GRANULARITIES.indexOf(granularity)
 
   return (
     <div className={styles.page}>
@@ -213,24 +267,20 @@ export default function ReviewPage() {
                 >
                   Work by assignee
                 </button>
+
               </div>
 
               <div className={styles.chartArea}>
                 {activeTab === 'timeline' && (
-                  dayData.length === 0 ? (
-                    <p className={styles.empty}>No completions recorded yet.</p>
+                  timeData.length === 0 ? (
+                    <p className={styles.empty}>No activity recorded yet.</p>
                   ) : (
+                    <div className={styles.timelineWrap}>
                     <ResponsiveContainer width="100%" height={280}>
-                      <AreaChart data={dayData} margin={{ top: 10, right: 16, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="cumulativeGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor="var(--color-accent)" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0.02} />
-                          </linearGradient>
-                        </defs>
+                      <LineChart data={timeData} margin={{ top: 10, right: 16, left: -20, bottom: 0 }}>
                         <XAxis
                           dataKey="date"
-                          tickFormatter={fmtDate}
+                          tickFormatter={(key) => fmtBucket(key, granularity)}
                           tick={{ fontSize: 11, fill: 'var(--color-text-subtle)' }}
                           tickLine={false}
                           axisLine={false}
@@ -249,33 +299,58 @@ export default function ReviewPage() {
                             borderRadius: 6,
                             fontSize: 12,
                           }}
-                          labelFormatter={(label) => fmtDate(String(label))}
-                          formatter={(val, name) => [
-                            val,
-                            name === 'cumulative' ? 'Total completed' : 'Completed that day',
-                          ]}
+                          labelFormatter={(label) => fmtBucket(String(label), granularity)}
                         />
-                        <Area
-                          type="monotone"
-                          dataKey="cumulative"
-                          stroke="var(--color-accent)"
+                        <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                        <Line
+                          type="stepAfter"
+                          dataKey="created"
+                          name="Created"
+                          stroke="rgba(255,255,255,0.25)"
                           strokeWidth={2}
-                          fill="url(#cumulativeGrad)"
                           dot={false}
-                          name="cumulative"
                         />
-                        <Area
-                          type="monotone"
+                        <Line
+                          type="stepAfter"
+                          dataKey="inProgress"
+                          name="In Progress"
+                          stroke="var(--color-col-in-progress, #f59e0b)"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                        <Line
+                          type="stepAfter"
                           dataKey="completed"
-                          stroke="var(--color-col-ready, #22c55e)"
-                          strokeWidth={1.5}
-                          fill="none"
+                          name="Completed"
+                          stroke="#22c55e"
+                          strokeWidth={2}
                           dot={false}
-                          strokeDasharray="4 2"
-                          name="completed"
                         />
-                      </AreaChart>
+                      </LineChart>
                     </ResponsiveContainer>
+                    <div className={styles.granControl}>
+                      <input
+                        type="range"
+                        min={0}
+                        max={5}
+                        step={1}
+                        value={granIdx}
+                        onChange={(e) => setGranularity(GRANULARITIES[Number(e.target.value)])}
+                        className={styles.granSlider}
+                      />
+                      <div className={styles.granLabels}>
+                        {GRAN_LABELS.map((l, i) => (
+                          <span
+                            key={l}
+                            className={`${styles.granLabel} ${i === granIdx ? styles.granLabelActive : ''}`}
+                            style={{ left: `calc(${i / 5} * (100% - 11px) + 5.5px)` }}
+                          >
+                            {l}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    </div>
                   )
                 )}
 

@@ -136,6 +136,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--color-bg);
 }
 
 .chartArea > * { width: 100%; }
@@ -146,4 +147,77 @@
   font-style: italic;
   text-align: center;
   padding: 40px 0;
+}
+
+/* ── Granularity slider ───────────────────────────────── */
+.timelineWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.timelineWrap > :first-child {
+  width: 100%;
+}
+
+.granControl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 0 4px;
+  width: 50%;
+}
+
+.granSlider {
+  width: 100%;
+  height: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--color-border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.granSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--color-surface);
+}
+
+.granSlider::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  cursor: pointer;
+  border: 2px solid var(--color-surface);
+}
+
+.granLabels {
+  position: relative;
+  width: 100%;
+  height: 16px;
+}
+
+.granLabel {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  transition: color 0.12s;
+  user-select: none;
+}
+
+.granLabelActive {
+  color: var(--color-text);
+  font-weight: 600;
 }
