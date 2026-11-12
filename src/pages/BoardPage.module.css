@@ -60,35 +60,46 @@
   color: var(--color-text-muted);
 }
 
-.search {
-  width: 220px;
+.focusToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   height: 32px;
   padding: 0 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  background:
-    linear-gradient(
-      115deg,
-      transparent 55%,
-      rgba(210,220,240,0.04) 58%,
-      rgba(210,220,240,0.04) 60%,
-      transparent 62%,
-      rgba(210,220,240,0.09) 66%,
-      rgba(210,220,240,0.09) 69%,
-      transparent 72%,
-      rgba(210,220,240,0.04) 74%,
-      rgba(210,220,240,0.04) 76%,
-      transparent 79%
-    ),
-    var(--color-surface-raised);
-  color: var(--color-text);
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.15s;
+  background: transparent;
+  color: var(--color-text-subtle);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
-.search::placeholder { color: var(--color-text-subtle); }
-.search:focus { border-color: var(--color-accent); }
+.focusToggle:hover {
+  color: var(--color-text-muted);
+  border-color: var(--color-text-subtle);
+}
+
+.focusToggleOn {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.focusToggleOn:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: rgba(99,102,241,0.06);
+}
+
+.focusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
 
 .addButton {
   height: 32px;
