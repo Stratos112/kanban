@@ -144,7 +144,7 @@
   flex-direction: column;
   flex: 1;
   min-width: 250px;
-  max-width: 310px;
+  max-width: 440px;
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--color-bg) 96%, var(--col-accent, transparent) 4%);
   overflow: hidden;
@@ -186,7 +186,55 @@
 /* Context column */
 .contextColumn {
   min-width: 270px;
-  max-width: 330px;
+  max-width: 460px;
+}
+
+/* ── Collapsed column ────────────────────────────────── */
+.columnCollapsed {
+  flex: none;
+  min-width: 44px;
+  max-width: 44px;
+  width: 44px;
+}
+
+.columnCollapsed .columnHeader {
+  height: 100%;
+  padding: 12px 0;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  border-bottom: none;
+  cursor: pointer;
+}
+
+.columnCollapsed .columnLabel {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+}
+
+.columnCollapsed .columnCount {
+  font-size: 12px;
+  font-weight: 800;
+  min-width: 26px;
+  padding: 3px 0;
+  text-align: center;
+}
+
+.columnCollapsed .columnBody {
+  display: none;
+}
+
+/* Clickable header */
+.columnHeaderClickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.columnHeaderClickable:hover {
+  background: color-mix(in srgb, var(--col-accent, var(--color-surface)) 18%, var(--color-surface) 82%);
 }
 
 /* ── Column header ───────────────────────────────────── */

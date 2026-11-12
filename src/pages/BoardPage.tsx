@@ -155,6 +155,7 @@ export default function BoardPage() {
   const [cascadingIds, setCascadingIds] = useState<Set<string>>(new Set())
   const [leavingTasks, setLeavingTasks] = useState<BoardTask[]>([])
   const [poppingContextIds, setPoppingContextIds] = useState<Set<string>>(new Set())
+  const [collapsedCols, setCollapsedCols] = useState<Set<string>>(new Set())
   const tasksSnapshot = useRef<BoardTask[]>([])
   const cascadeActiveRef = useRef(false)
   const creatingRef   = useRef(false)
@@ -954,6 +955,12 @@ export default function BoardPage() {
             const colTasks = tasksInColumn(col.key)
             const css = { '--col-accent': col.accent } as React.CSSProperties
             const isDragTarget = activeTask?.status === col.key
+            const isCollapsed = collapsedCols.has(col.key)
+            const toggleCollapse = () => setCollapsedCols((prev) => {
+              const next = new Set(prev)
+              next.has(col.key) ? next.delete(col.key) : next.add(col.key)
+              return next
+            })
             return (
               <section
                 key={col.key}
@@ -962,6 +969,7 @@ export default function BoardPage() {
                   col.key === 'in_review' && styles.inReviewColumn,
                   col.key === 'completed' && styles.completedColumn,
                   isDragTarget && styles.columnDragTarget,
+                  isCollapsed && styles.columnCollapsed,
                 ].filter(Boolean).join(' ')}
                 style={{ ...css, ...(linkingState ? { position: 'relative' } : {}) }}
               >
@@ -973,7 +981,11 @@ export default function BoardPage() {
                     borderRadius: 'inherit',
                   }} />
                 )}
-                <div className={styles.columnHeader} style={css}>
+                <div
+                  className={`${styles.columnHeader} ${styles.columnHeaderClickable}`}
+                  style={css}
+                  onClick={toggleCollapse}
+                >
                   <span className={styles.columnLabel}>{col.label}</span>
                   <span className={styles.columnCount}>{colTasks.length}</span>
                 </div>
@@ -1052,8 +1064,12 @@ export default function BoardPage() {
           })}
 
           {/* Context column */}
+          {(() => {
+            const ctxCollapsed = collapsedCols.has('context')
+            const toggleCtx = () => setCollapsedCols((prev) => { const n = new Set(prev); n.has('context') ? n.delete('context') : n.add('context'); return n })
+            return (
           <section
-            className={`${styles.column} ${styles.contextColumn}`}
+            className={[styles.column, styles.contextColumn, ctxCollapsed && styles.columnCollapsed].filter(Boolean).join(' ')}
             style={{ '--col-accent': 'var(--color-col-context)', ...(linkingState ? { position: 'relative' } : {}) } as React.CSSProperties}
           >
             {linkingState && (
@@ -1065,8 +1081,9 @@ export default function BoardPage() {
               }} />
             )}
             <div
-              className={styles.columnHeader}
+              className={`${styles.columnHeader} ${styles.columnHeaderClickable}`}
               style={{ '--col-accent': 'var(--color-col-context)' } as React.CSSProperties}
+              onClick={toggleCtx}
             >
               <span className={styles.columnLabel}>Context</span>
               <span className={styles.columnCount}>{contextCards.filter((c) => {
@@ -1112,6 +1129,8 @@ export default function BoardPage() {
               }
             </div>
           </section>
+            )
+          })()}
         </div>
 
         <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
