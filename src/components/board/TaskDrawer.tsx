@@ -348,14 +348,22 @@ export default function TaskDrawer({
                 onChange={(e) => saveAssignee(e.target.value)}
               >
                 <option value="">Unassigned</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.id === currentUserId ? `${u.displayName} (you)` : u.displayName}
-                  </option>
+                {users.filter((u) => u.id === currentUserId).map((u) => (
+                  <option key={u.id} value={u.id}>{u.displayName} (you)</option>
                 ))}
               </select>
             </div>
           </div>
+
+          {!assigneeId && (
+            <button
+              type="button"
+              className={styles.acceptBtn}
+              onClick={() => saveAssignee(currentUserId)}
+            >
+              Accept this task
+            </button>
+          )}
 
           {/* Context */}
           <div className={styles.contextSection}>

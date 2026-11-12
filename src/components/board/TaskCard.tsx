@@ -22,6 +22,7 @@ export interface TaskCardProps {
   isCompleted?: boolean
   isSelectable?: boolean
   onSelect?: () => void
+  onAccept?: () => void
 }
 
 export default function TaskCard({
@@ -45,6 +46,7 @@ export default function TaskCard({
   isCompleted = false,
   isSelectable,
   onSelect,
+  onAccept,
 }: TaskCardProps) {
   const isContext        = type === 'context'
   const isQuestion       = isContext && relationType === 'question'
@@ -143,7 +145,7 @@ export default function TaskCard({
           {dueDate && (
             <span className={styles.dueDate}>{formatDate(dueDate)}</span>
           )}
-          {assigneeColor && (
+          {assigneeColor ? (
             <span
               className={styles.avatar}
               style={{ background: assigneeColor }}
@@ -151,6 +153,14 @@ export default function TaskCard({
             >
               {assigneeName?.[0]?.toUpperCase() ?? '?'}
             </span>
+          ) : onAccept && !isCompleted && !isContext && (
+            <button
+              className={styles.acceptBtn}
+              onClick={(e) => { e.stopPropagation(); onAccept() }}
+              title="Accept this task"
+            >
+              Accept
+            </button>
           )}
         </div>
       </div>

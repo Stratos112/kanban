@@ -8,6 +8,9 @@ vi.mock('../../lib/AuthContext', () => ({
     profile: { id: 'user-1', display_name: 'Guest', avatar_color: '#6366f1', created_at: '' },
     userId: 'user-1',
     loading: false,
+    setProfile: () => {},
+    hideOthers: true,
+    setHideOthers: () => {},
   }),
 }))
 
@@ -26,7 +29,7 @@ describe('ProfilePage', () => {
 
   it('renders all three stat labels', () => {
     renderWithRouter(<ProfilePage />)
-    expect(screen.getByText(/assigned/i)).toBeInTheDocument()
+    expect(screen.getByText('Assigned')).toBeInTheDocument()
     expect(screen.getByText(/completed/i)).toBeInTheDocument()
     expect(screen.getByText(/questions asked/i)).toBeInTheDocument()
   })

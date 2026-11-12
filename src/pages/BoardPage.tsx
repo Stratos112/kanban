@@ -122,7 +122,7 @@ function ColumnBody({
 /* ── Page ────────────────────────────────────────────── */
 export default function BoardPage() {
   const { slug } = useParams<{ slug: string }>()
-  const { userId, loading: authLoading } = useAuth()
+  const { userId, loading: authLoading, hideOthers } = useAuth()
 
   const [boardId, setBoardId]             = useState<string | null>(null)
   const [boardName, setBoardName]         = useState('')
@@ -747,8 +747,24 @@ export default function BoardPage() {
     await loadTasks(boardId, true)
   }
 
+  async function handleAccept(taskId: string) {
+    if (!userId) return
+    const user = users.find((u) => u.id === userId)
+    setTasks((prev) => prev.map((t) =>
+      t.id === taskId
+        ? { ...t, assignee: user ? { id: user.id, name: user.displayName, color: user.avatarColor } : t.assignee }
+        : t
+    ))
+    await supabase.from('tasks').update({ assignee_id: userId }).eq('id', taskId)
+  }
+
   /* ── Render ────────────────────────────────────────── */
-  const tasksInColumn = (status: TaskStatus) => tasks.filter((t) => t.status === status)
+  const tasksInColumn = (status: TaskStatus) =>
+    tasks.filter((t) => {
+      if (t.status !== status) return false
+      if (hideOthers && t.assignee && t.assignee.id !== userId) return false
+      return true
+    })
   const activeTask    = activeId ? tasks.find((t) => t.id === activeId) ?? null : null
   const openTask      = openTaskId ? tasks.find((t) => t.id === openTaskId) ?? null : null
   const isLoading     = authLoading || loadingTasks
@@ -1007,6 +1023,7 @@ export default function BoardPage() {
                                 }}
                                 isSelectable={isSelectableCard}
                                 onSelect={() => handleSelectLinkTarget(t)}
+                                onAccept={!t.assignee && userId ? () => handleAccept(t.id) : undefined}
                               />
                             )
                           })
@@ -1052,7 +1069,10 @@ export default function BoardPage() {
               style={{ '--col-accent': 'var(--color-col-context)' } as React.CSSProperties}
             >
               <span className={styles.columnLabel}>Context</span>
-              <span className={styles.columnCount}>{contextCards.length}</span>
+              <span className={styles.columnCount}>{contextCards.filter((c) => {
+                const p = tasks.find((t) => t.id === c.parentTaskId)
+                return !(hideOthers && p?.assignee && p.assignee.id !== userId)
+              }).length}</span>
             </div>
             <div className={styles.columnBody}>
               {isLoading
@@ -1062,9 +1082,8 @@ export default function BoardPage() {
                   : contextCards.map((c) => {
                       const parent = tasks.find((t) => t.id === c.parentTaskId)
                       const isPopping = poppingContextIds.has(c.id)
-                      // Hide cards whose parent is completed and have already popped.
-                      // Skip during active drag so hovering over Completed doesn't prematurely dismiss the card.
                       if (parent?.status === 'completed' && !isPopping && parent?.id !== activeId) return null
+                      if (hideOthers && parent?.assignee && parent.assignee.id !== userId) return null
                       return (
                         <div
                           key={c.id}
