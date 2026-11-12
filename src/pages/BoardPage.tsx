@@ -814,6 +814,9 @@ export default function BoardPage() {
     await supabase.from('tasks').update({ assignee_id: userId }).eq('id', taskId)
   }
 
+  /* ── Search ────────────────────────────────────────── */
+  const [searchQuery, setSearchQuery] = useState('')
+
   /* ── Label filter ──────────────────────────────────── */
   const [boardLabels, setBoardLabels]   = useState<{ id: string; name: string; color: string }[]>([])
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set())
@@ -844,11 +847,13 @@ export default function BoardPage() {
   }
 
   /* ── Render ────────────────────────────────────────── */
+  const searchLower = searchQuery.toLowerCase()
   const tasksInColumn = (status: TaskStatus) =>
     tasks.filter((t) => {
       if (t.status !== status) return false
       if (hideOthers && t.assignee && t.assignee.id !== userId) return false
       if (selectedLabels.size > 0 && !t.labels.some((l) => selectedLabels.has(l.name))) return false
+      if (searchLower && !t.title.toLowerCase().includes(searchLower)) return false
       return true
     })
   const activeTask    = activeId ? tasks.find((t) => t.id === activeId) ?? null : null
@@ -895,8 +900,6 @@ export default function BoardPage() {
         <div className={styles.headerLeft}>
           <h1 className={styles.title}>{boardName || 'Board'}</h1>
           <span className={styles.taskCount}>{tasks.length} tasks</span>
-        </div>
-        <div className={styles.headerRight}>
           <button
             type="button"
             className={`${styles.focusToggle} ${hideOthers ? styles.focusToggleOn : ''}`}
@@ -904,8 +907,17 @@ export default function BoardPage() {
             title={hideOthers ? 'Focus mode on — click to show all tasks' : 'Focus mode off — click to show only your tasks'}
           >
             <span className={styles.focusDot} />
-            Focus
+            {hideOthers ? 'Focus' : 'Global'}
           </button>
+        </div>
+        <div className={styles.headerRight}>
+          <input
+            className={styles.search}
+            type="search"
+            placeholder="Search tasks…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
 
           {boardLabels.length > 0 && (
             <div className={styles.labelsDropdown} ref={labelsRef}>
