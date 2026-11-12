@@ -814,11 +814,41 @@ export default function BoardPage() {
     await supabase.from('tasks').update({ assignee_id: userId }).eq('id', taskId)
   }
 
+  /* ── Label filter ──────────────────────────────────── */
+  const [boardLabels, setBoardLabels]   = useState<{ id: string; name: string; color: string }[]>([])
+  const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set())
+  const [labelsOpen, setLabelsOpen]     = useState(false)
+  const labelsRef                       = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!boardId) return
+    supabase.from('labels').select('id, name, color').eq('board_id', boardId).order('name')
+      .then(({ data }) => setBoardLabels(data ?? []))
+  }, [boardId])
+
+  useEffect(() => {
+    if (!labelsOpen) return
+    function onDown(e: MouseEvent) {
+      if (labelsRef.current && !labelsRef.current.contains(e.target as Node)) setLabelsOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [labelsOpen])
+
+  function toggleLabel(name: string) {
+    setSelectedLabels((prev) => {
+      const next = new Set(prev)
+      next.has(name) ? next.delete(name) : next.add(name)
+      return next
+    })
+  }
+
   /* ── Render ────────────────────────────────────────── */
   const tasksInColumn = (status: TaskStatus) =>
     tasks.filter((t) => {
       if (t.status !== status) return false
       if (hideOthers && t.assignee && t.assignee.id !== userId) return false
+      if (selectedLabels.size > 0 && !t.labels.some((l) => selectedLabels.has(l.name))) return false
       return true
     })
   const activeTask    = activeId ? tasks.find((t) => t.id === activeId) ?? null : null
@@ -876,6 +906,49 @@ export default function BoardPage() {
             <span className={styles.focusDot} />
             Focus
           </button>
+
+          {boardLabels.length > 0 && (
+            <div className={styles.labelsDropdown} ref={labelsRef}>
+              <button
+                type="button"
+                className={`${styles.labelsBtn} ${selectedLabels.size > 0 ? styles.labelsBtnActive : ''}`}
+                onClick={() => setLabelsOpen((o) => !o)}
+              >
+                Labels
+                {selectedLabels.size > 0 && <span className={styles.labelsBadge}>{selectedLabels.size}</span>}
+                <span className={styles.labelsCaret}>▾</span>
+              </button>
+              {labelsOpen && (
+                <div className={styles.labelsPanel}>
+                  {boardLabels.map((l) => {
+                    const active = selectedLabels.has(l.name)
+                    return (
+                      <button
+                        key={l.id}
+                        type="button"
+                        className={`${styles.labelOption} ${active ? styles.labelOptionActive : ''}`}
+                        onClick={() => toggleLabel(l.name)}
+                      >
+                        <span className={styles.labelOptionDot} style={{ background: l.color }} />
+                        <span className={styles.labelOptionName}>{l.name}</span>
+                        {active && <span className={styles.labelOptionCheck}>✓</span>}
+                      </button>
+                    )
+                  })}
+                  {selectedLabels.size > 0 && (
+                    <button
+                      type="button"
+                      className={styles.labelsClearBtn}
+                      onClick={() => { setSelectedLabels(new Set()); setLabelsOpen(false) }}
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <button
             className={styles.addButton}
             type="button"
