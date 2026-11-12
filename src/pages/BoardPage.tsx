@@ -174,6 +174,33 @@ export default function BoardPage() {
     })
   }, [slug, authLoading])
 
+  // Ensure every task has a details card (lazy-creates for tasks created before this feature)
+  useEffect(() => {
+    if (!openTaskId || !userId || !boardId) return
+    const hasDetails = contextCards.some((c) => c.parentTaskId === openTaskId && c.relationType === 'details')
+    if (hasDetails) return
+    const parentTask = tasks.find((t) => t.id === openTaskId)
+    if (!parentTask) return
+    supabase.from('tasks').insert({
+      user_id:               userId,
+      board_id:              boardId,
+      type:                  'context',
+      status:                'context',
+      title:                 `Details for '${parentTask.title}'`,
+      question:              '',
+      context_relation_type: 'details',
+      parent_task_id:        openTaskId,
+      position:              0,
+    }).select().single().then(({ data: ctxRow }) => {
+      if (ctxRow) {
+        setContextCards((prev) => [
+          { id: ctxRow.id, refKey: ctxRow.ref_key, title: ctxRow.title ?? '', question: '', relationType: 'details', linkType: 'blocking', priority: 'normal', labels: [], parentTaskId: openTaskId },
+          ...prev,
+        ])
+      }
+    })
+  }, [openTaskId])
+
   useEffect(() => {
     if (!boardId) return
     const channel = supabase
@@ -328,6 +355,26 @@ export default function BoardPage() {
       .single()
 
     if (error || !row) { console.error(error); return }
+
+    // Auto-create the required details card and log task creation
+    await Promise.all([
+      supabase.from('tasks').insert({
+        user_id:               userId,
+        board_id:              boardId,
+        type:                  'context',
+        status:                'context',
+        title:                 `Details for '${payload.title}'`,
+        question:              '',
+        context_relation_type: 'details',
+        parent_task_id:        row.id,
+        position:              0,
+      }),
+      supabase.from('activity_log').insert({
+        task_id:  row.id,
+        actor_id: userId,
+        action:   'task_created',
+      }),
+    ])
 
     for (const { name } of payload.labels) {
       let { data: label } = await supabase
