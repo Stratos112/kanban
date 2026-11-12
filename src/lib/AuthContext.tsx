@@ -26,6 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile: null,
     loading: true,
     hideOthers: localStorage.getItem('kanban-hide-others') !== 'false',
+    setProfile: () => {},
+    setHideOthers: () => {},
   })
 
   useEffect(() => {
