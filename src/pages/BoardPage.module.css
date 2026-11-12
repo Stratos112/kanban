@@ -271,3 +271,27 @@
   filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.6));
   pointer-events: none;
 }
+
+/* ── Cascade leave animation ─────────────────────────── */
+@keyframes cascadeLeave {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(60px) scale(0.88); }
+}
+
+.cascadeLeaving {
+  animation: cascadeLeave 0.35s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+
+/* ── Context card pop-out animation ──────────────────── */
+@keyframes contextPopOut {
+  0%   { transform: scale(1);    opacity: 1; }
+  28%  { transform: scale(1.07); opacity: 1; }
+  80%  { transform: scale(0.55); opacity: 0; }
+  100% { transform: scale(0.55); opacity: 0; }
+}
+
+.contextCardPopping {
+  animation: contextPopOut 0.34s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+  pointer-events: none;
+}

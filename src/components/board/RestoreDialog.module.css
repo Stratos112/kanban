@@ -47,6 +47,16 @@
   flex: 1;
 }
 
+.sectionLabel {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+  margin: 0 0 8px;
+}
+
 .desc {
   font-family: var(--font-sans);
   font-size: 13px;

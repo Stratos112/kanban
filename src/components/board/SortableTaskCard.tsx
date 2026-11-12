@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import TaskCard, { type TaskCardProps } from './TaskCard'
+import styles from './SortableTaskCard.module.css'
 
 interface Props extends TaskCardProps {
   id: string
@@ -11,9 +12,10 @@ interface Props extends TaskCardProps {
   isParent?: boolean
   isWaitingOnTask?: boolean
   isCompleted?: boolean
+  isCascading?: boolean
 }
 
-export default function SortableTaskCard({ id, onOpen, isSelectable, onSelect, isParent, isWaitingOnTask, isCompleted, ...props }: Props) {
+export default function SortableTaskCard({ id, onOpen, isSelectable, onSelect, isParent, isWaitingOnTask, isCompleted, isCascading, ...props }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const didDrag = useRef(false)
 
@@ -33,9 +35,10 @@ export default function SortableTaskCard({ id, onOpen, isSelectable, onSelect, i
   return (
     <div
       ref={setNodeRef}
+      className={isCascading ? styles.cascadeArriving : undefined}
       style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
+        transform: isCascading ? undefined : CSS.Transform.toString(transform),
+        transition: isCascading ? undefined : transition,
         opacity: isDragging ? 0.25 : 1,
         cursor: isDragging ? 'grabbing' : isSelectable ? 'crosshair' : 'grab',
         ...(isSelectable ? { position: 'relative' as const, zIndex: 2 } : {}),

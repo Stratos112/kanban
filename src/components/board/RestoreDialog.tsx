@@ -2,10 +2,17 @@ import { useState } from 'react'
 import type { CascadedTask } from '../../lib/completion'
 import styles from './RestoreDialog.module.css'
 
+export interface BlockedRestorable {
+  id: string
+  refKey: number
+  title: string
+}
+
 interface Props {
   taskTitle: string
   cascadedTasks: CascadedTask[]
-  onConfirm: (selectedIds: string[]) => void
+  blockedTasks?: BlockedRestorable[]
+  onConfirm: (selectedCascadeIds: string[], selectedBlockedIds: string[]) => void
   onCancel: () => void
 }
 
@@ -13,13 +20,14 @@ function formatStatus(s: string) {
   return s.replace(/_/g, ' ')
 }
 
-export default function RestoreDialog({ taskTitle, cascadedTasks, onConfirm, onCancel }: Props) {
-  const [selected, setSelected] = useState<Set<string>>(
+export default function RestoreDialog({ taskTitle, cascadedTasks, blockedTasks = [], onConfirm, onCancel }: Props) {
+  const [selectedCascade, setSelectedCascade] = useState<Set<string>>(
     () => new Set(cascadedTasks.map((t) => t.id))
   )
+  const [selectedBlocked, setSelectedBlocked] = useState<Set<string>>(new Set())
 
-  function toggle(id: string) {
-    setSelected((prev) => {
+  function toggleCascade(id: string) {
+    setSelectedCascade((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
@@ -27,7 +35,17 @@ export default function RestoreDialog({ taskTitle, cascadedTasks, onConfirm, onC
     })
   }
 
-  const count = selected.size
+  function toggleBlocked(id: string) {
+    setSelectedBlocked((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const totalCount = selectedCascade.size + selectedBlocked.size
+  const hasBoth = cascadedTasks.length > 0 && blockedTasks.length > 0
 
   return (
     <div className={styles.backdrop}>
@@ -37,28 +55,62 @@ export default function RestoreDialog({ taskTitle, cascadedTasks, onConfirm, onC
         </div>
 
         <div className={styles.body}>
-          <p className={styles.desc}>
-            These tasks were automatically completed when{' '}
-            <strong>"{taskTitle}"</strong> was completed. Select which to restore:
-          </p>
+          {cascadedTasks.length > 0 && (
+            <>
+              {hasBoth
+                ? <p className={styles.sectionLabel}>Auto-completed with "{taskTitle}"</p>
+                : <p className={styles.desc}>
+                    These tasks were automatically completed when{' '}
+                    <strong>"{taskTitle}"</strong> was completed. Select which to restore:
+                  </p>
+              }
+              <ul className={styles.list}>
+                {cascadedTasks.map((task) => (
+                  <li key={task.id}>
+                    <label className={styles.item}>
+                      <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={selectedCascade.has(task.id)}
+                        onChange={() => toggleCascade(task.id)}
+                      />
+                      <span className={styles.refKey}>KAN-{task.refKey}</span>
+                      <span className={styles.taskTitle}>{task.title || '(untitled)'}</span>
+                      <span className={styles.prevStatus}>→ {formatStatus(task.previousStatus)}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
 
-          <ul className={styles.list}>
-            {cascadedTasks.map((task) => (
-              <li key={task.id}>
-                <label className={styles.item}>
-                  <input
-                    type="checkbox"
-                    className={styles.checkbox}
-                    checked={selected.has(task.id)}
-                    onChange={() => toggle(task.id)}
-                  />
-                  <span className={styles.refKey}>KAN-{task.refKey}</span>
-                  <span className={styles.taskTitle}>{task.title || '(untitled)'}</span>
-                  <span className={styles.prevStatus}>→ {formatStatus(task.previousStatus)}</span>
-                </label>
-              </li>
-            ))}
-          </ul>
+          {blockedTasks.length > 0 && (
+            <>
+              {hasBoth
+                ? <p className={styles.sectionLabel} style={{ marginTop: '14px' }}>Was blocked by "{taskTitle}"</p>
+                : <p className={styles.desc}>
+                    <strong>"{taskTitle}"</strong> was blocking the tasks below, which have since been completed. Restore them and re-apply the blocking relationship?
+                  </p>
+              }
+              <ul className={styles.list}>
+                {blockedTasks.map((task) => (
+                  <li key={task.id}>
+                    <label className={styles.item}>
+                      <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={selectedBlocked.has(task.id)}
+                        onChange={() => toggleBlocked(task.id)}
+                      />
+                      <span className={styles.refKey}>KAN-{task.refKey}</span>
+                      <span className={styles.taskTitle}>{task.title || '(untitled)'}</span>
+                      <span className={styles.prevStatus}>→ in progress</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
 
         <div className={styles.footer}>
@@ -68,9 +120,9 @@ export default function RestoreDialog({ taskTitle, cascadedTasks, onConfirm, onC
           <button
             className={styles.restoreBtn}
             type="button"
-            onClick={() => onConfirm([...selected])}
+            onClick={() => onConfirm([...selectedCascade], [...selectedBlocked])}
           >
-            Restore {count} task{count !== 1 ? 's' : ''}
+            {totalCount > 0 ? `Restore ${totalCount} task${totalCount !== 1 ? 's' : ''}` : 'Restore'}
           </button>
         </div>
       </div>
