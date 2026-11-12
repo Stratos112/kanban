@@ -5,41 +5,6 @@ import { supabase } from '../../lib/supabase'
 import TaskCard from './TaskCard'
 import styles from './TaskDrawer.module.css'
 
-interface ActivityEntry {
-  id: string
-  action: string
-  payload: Record<string, unknown> | null
-  created_at: string
-}
-
-function formatActivity(entry: ActivityEntry): string {
-  const p = entry.payload ?? {}
-  switch (entry.action) {
-    case 'task_created':     return 'Task created'
-    case 'title_edited':     return 'Title updated'
-    case 'status_changed':   return `Status: ${p.from} → ${p.to}`
-    case 'priority_changed': return `Priority: ${p.from} → ${p.to}`
-    case 'assigned':         return `Assigned to ${p.name}`
-    case 'unassigned':       return 'Unassigned'
-    case 'due_date_set':     return `Due date: ${p.to}`
-    case 'due_date_cleared': return 'Due date removed'
-    case 'comment_added':    return 'Comment added'
-    case 'question_added':   return 'Question added'
-    default:                 return entry.action.replace(/_/g, ' ')
-  }
-}
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  const days = Math.floor(hrs / 24)
-  if (days < 30) return `${days}d ago`
-  return new Date(iso).toLocaleDateString()
-}
 
 const STATUSES: { value: Exclude<TaskStatus, 'context'>; label: string }[] = [
   { value: 'backlog',     label: 'Backlog' },
@@ -198,13 +163,12 @@ export default function TaskDrawer({
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [addingContext, setAddingContext]   = useState(false)
   const [newQuestion, setNewQuestion]      = useState('')
-  const [newRelType, setNewRelType]        = useState('details')
+  const [newRelType, setNewRelType]        = useState('question')
   const [assigneeId, setAssigneeId]        = useState(task.assignee?.id ?? '')
   const [confirmDelete, setConfirmDelete]  = useState(false)
   const [confirmDeleteLinkId, setConfirmDeleteLinkId] = useState<string | null>(null)
   const [selectedLinkType, setSelectedLinkType] = useState<string>('')
   const [expandedCtxId, setExpandedCtxId] = useState<string | null>(null)
-  const [activityLog, setActivityLog]      = useState<ActivityEntry[]>([])
   const [description, setDescription]      = useState('')
   const titleRef = useRef<HTMLTextAreaElement>(null)
 
@@ -225,30 +189,15 @@ export default function TaskDrawer({
     setDescription(detailsCard?.question ?? '')
   }, [task.id, contextCards])
 
-  useEffect(() => {
-    supabase
-      .from('activity_log')
-      .select('id, action, payload, created_at')
-      .eq('task_id', task.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => setActivityLog((data as ActivityEntry[]) ?? []))
-  }, [task.id])
-
   async function logActivity(action: string, payload?: Record<string, unknown>) {
-    const { data } = await supabase.from('activity_log').insert({
+    await supabase.from('activity_log').insert({
       task_id:  task.id,
       actor_id: currentUserId,
       action,
       payload:  payload ?? null,
-    }).select('id, action, payload, created_at').single()
-    if (data) setActivityLog((prev) => [data as ActivityEntry, ...prev])
+    })
   }
 
-  async function saveDescription(val: string) {
-    const detailsCard = contextCards.find((c) => c.parentTaskId === task.id && c.relationType === 'details')
-    if (!detailsCard) return
-    await supabase.from('tasks').update({ question: val }).eq('id', detailsCard.id)
-  }
 
   useEffect(() => {
     async function load() {
@@ -444,32 +393,6 @@ export default function TaskDrawer({
             </button>
           )}
 
-          {/* Details card — description + activity log */}
-          <div className={styles.detailsPanel}>
-            <span className={styles.detailsPanelLabel}>Details</span>
-            <textarea
-              className={styles.descriptionInput}
-              placeholder="Add a description…"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              onBlur={(e) => saveDescription(e.target.value)}
-              rows={3}
-            />
-            <div className={styles.activityLog}>
-              <span className={styles.activityLogLabel}>Activity</span>
-              {activityLog.length === 0 ? (
-                <p className={styles.activityEmpty}>No activity yet.</p>
-              ) : (
-                activityLog.map((entry) => (
-                  <div key={entry.id} className={styles.activityEntry}>
-                    <span className={styles.activityText}>{formatActivity(entry)}</span>
-                    <span className={styles.activityTime}>{timeAgo(entry.created_at)}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
           {/* Context */}
           <div className={styles.contextSection}>
             <div className={styles.contextSectionHeader}>
@@ -485,8 +408,32 @@ export default function TaskDrawer({
               )}
             </div>
 
-            {contextCards.filter((c) => c.relationType !== 'details').map((card) => {
+            {contextCards.map((card) => {
+              const isDetails  = card.relationType === 'details'
               const isExpanded = expandedCtxId === card.id
+
+              if (isDetails) {
+                return (
+                  <div
+                    key={card.id}
+                    className={styles.detailsStrip}
+                    onClick={() => onOpenContext(card.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpenContext(card.id) }}
+                  >
+                    <span className={styles.detailsStripType}>Details</span>
+                    <span className={styles.detailsStripText}>
+                      {description
+                        ? description
+                        : <em className={styles.detailsStripEmpty}>Description &amp; activity log</em>
+                      }
+                    </span>
+                    <span className={styles.detailsStripKey}>KAN-{card.refKey}</span>
+                  </div>
+                )
+              }
+
               return (
                 <div key={card.id}>
                   <div className={styles.contextCardRow}>
@@ -562,7 +509,7 @@ export default function TaskDrawer({
               </div>
             )}
 
-            {contextCards.filter((c) => c.relationType !== 'details').length === 0 && !addingContext && (
+            {contextCards.length === 0 && !addingContext && (
               <p className={styles.contextEmpty}>No context yet.</p>
             )}
           </div>
