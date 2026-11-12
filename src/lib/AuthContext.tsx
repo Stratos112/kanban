@@ -11,6 +11,8 @@ interface AuthState {
   setProfile: (p: Profile) => void
   hideOthers: boolean
   setHideOthers: (v: boolean) => void
+  teammateIds: Set<string>
+  refreshTeammates: () => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -22,8 +24,24 @@ const AuthContext = createContext<AuthState>({
   setProfile: () => {},
   hideOthers: true,
   setHideOthers: () => {},
+  teammateIds: new Set(),
+  refreshTeammates: async () => {},
   signOut: async () => {},
 })
+
+async function fetchTeammateIds(uid: string): Promise<Set<string>> {
+  const { data } = await (supabase as any)
+    .from('team_invites')
+    .select('inviter_id, invitee_id')
+    .or(`inviter_id.eq.${uid},invitee_id.eq.${uid}`)
+    .eq('status', 'accepted')
+  const ids = new Set<string>()
+  for (const row of (data ?? []) as { inviter_id: string; invitee_id: string }[]) {
+    if (row.inviter_id !== uid) ids.add(row.inviter_id)
+    if (row.invitee_id !== uid) ids.add(row.invitee_id)
+  }
+  return ids
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
@@ -34,6 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile: () => {},
     hideOthers: localStorage.getItem('kanban-hide-others') !== 'false',
     setHideOthers: () => {},
+    teammateIds: new Set(),
+    refreshTeammates: async () => {},
     signOut: async () => {},
   })
 
@@ -42,7 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then(async ({ userId, profile }) => {
         const { data: { session } } = await supabase.auth.getSession()
         const isGuest = session?.user.is_anonymous ?? true
-        setState((s) => ({ ...s, userId, profile, loading: false, isGuest }))
+        const teammateIds = await fetchTeammateIds(userId)
+        setState((s) => ({ ...s, userId, profile, loading: false, isGuest, teammateIds }))
       })
       .catch((err) => {
         console.error('Auth failed:', err)
@@ -79,12 +100,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, hideOthers: v }))
   }
 
+  const refreshTeammates = async () => {
+    if (!state.userId) return
+    const ids = await fetchTeammateIds(state.userId)
+    setState((s) => ({ ...s, teammateIds: ids }))
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ ...state, setProfile, setHideOthers, signOut }}>
+    <AuthContext.Provider value={{ ...state, setProfile, setHideOthers, refreshTeammates, signOut }}>
       {children}
     </AuthContext.Provider>
   )

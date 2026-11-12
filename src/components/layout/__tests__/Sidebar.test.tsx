@@ -16,14 +16,14 @@ function renderSidebar(initialPath = '/board/test') {
 describe('Sidebar', () => {
   it('renders all three nav links', () => {
     renderSidebar()
-    expect(screen.getByRole('link', { name: /board/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^board$/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /profile/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /review/i })).toBeInTheDocument()
   })
 
   it('Board link points to /board/test', () => {
     renderSidebar()
-    expect(screen.getByRole('link', { name: /board/i })).toHaveAttribute('href', '/board/test')
+    expect(screen.getByRole('link', { name: /^board$/i })).toHaveAttribute('href', '/board/test')
   })
 
   it('Profile link points to /board/test/profile', () => {
@@ -43,7 +43,7 @@ describe('Sidebar', () => {
 
   it('marks the Board link active when on /board/test', () => {
     renderSidebar('/board/test')
-    const boardLink = screen.getByRole('link', { name: /board/i })
+    const boardLink = screen.getByRole('link', { name: /^board$/i })
     expect(boardLink).toHaveAttribute('aria-current', 'page')
   })
 
@@ -54,6 +54,6 @@ describe('Sidebar', () => {
 
   it('does not mark Board active when on /board/test/profile', () => {
     renderSidebar('/board/test/profile')
-    expect(screen.getByRole('link', { name: /board/i })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('link', { name: /^board$/i })).not.toHaveAttribute('aria-current')
   })
 })

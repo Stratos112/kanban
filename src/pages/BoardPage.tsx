@@ -122,7 +122,7 @@ function ColumnBody({
 /* ── Page ────────────────────────────────────────────── */
 export default function BoardPage() {
   const { slug } = useParams<{ slug: string }>()
-  const { userId, loading: authLoading, hideOthers, setHideOthers } = useAuth()
+  const { userId, loading: authLoading, hideOthers, setHideOthers, teammateIds } = useAuth()
 
   const [boardId, setBoardId]             = useState<string | null>(null)
   const [boardName, setBoardName]         = useState('')
@@ -851,7 +851,7 @@ export default function BoardPage() {
   const tasksInColumn = (status: TaskStatus) =>
     tasks.filter((t) => {
       if (t.status !== status) return false
-      if (hideOthers && t.assignee && t.assignee.id !== userId) return false
+      if (hideOthers && t.assignee && t.assignee.id !== userId && !teammateIds.has(t.assignee.id)) return false
       if (selectedLabels.size > 0 && !t.labels.some((l) => selectedLabels.has(l.name))) return false
       if (searchLower && !t.title.toLowerCase().includes(searchLower)) return false
       return true
@@ -1236,7 +1236,7 @@ export default function BoardPage() {
               <span className={styles.columnLabel}>Context</span>
               <span className={styles.columnCount}>{contextCards.filter((c) => {
                 const p = tasks.find((t) => t.id === c.parentTaskId)
-                return !(hideOthers && p?.assignee && p.assignee.id !== userId)
+                return !(hideOthers && p?.assignee && p.assignee.id !== userId && !teammateIds.has(p.assignee.id))
               }).length}</span>
             </div>
             <div className={styles.columnBody}>
@@ -1248,7 +1248,7 @@ export default function BoardPage() {
                       const parent = tasks.find((t) => t.id === c.parentTaskId)
                       const isPopping = poppingContextIds.has(c.id)
                       if (parent?.status === 'completed' && !isPopping && parent?.id !== activeId) return null
-                      if (hideOthers && parent?.assignee && parent.assignee.id !== userId) return null
+                      if (hideOthers && parent?.assignee && parent.assignee.id !== userId && !teammateIds.has(parent.assignee.id)) return null
                       return (
                         <div
                           key={c.id}
