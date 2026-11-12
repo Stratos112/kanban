@@ -10,9 +10,10 @@ interface Props extends TaskCardProps {
   onSelect?: () => void
   isParent?: boolean
   isWaitingOnTask?: boolean
+  isCompleted?: boolean
 }
 
-export default function SortableTaskCard({ id, onOpen, isSelectable, onSelect, isParent, isWaitingOnTask, ...props }: Props) {
+export default function SortableTaskCard({ id, onOpen, isSelectable, onSelect, isParent, isWaitingOnTask, isCompleted, ...props }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const didDrag = useRef(false)
 
@@ -43,7 +44,7 @@ export default function SortableTaskCard({ id, onOpen, isSelectable, onSelect, i
       {...attributes}
       {...listeners}
     >
-      <TaskCard {...props} isSelectable={isSelectable} onSelect={onSelect} isParent={isParent} isWaitingOnTask={isWaitingOnTask} />
+      <TaskCard {...props} isSelectable={isSelectable} onSelect={onSelect} isParent={isParent} isWaitingOnTask={isWaitingOnTask} isCompleted={isCompleted} />
     </div>
   )
 }

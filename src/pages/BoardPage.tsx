@@ -21,6 +21,9 @@ import ContextCardModal from '../components/board/ContextCardModal'
 import { useAuth } from '../lib/AuthContext'
 import { getBoardBySlug } from '../lib/boards'
 import { supabase } from '../lib/supabase'
+import { executeCompletion, executeUncompletion } from '../lib/completion'
+import type { CascadeResult } from '../lib/completion'
+import RestoreDialog from '../components/board/RestoreDialog'
 import styles from './BoardPage.module.css'
 import type { TaskPriority, TaskStatus, RelationshipType } from '../lib/database.types'
 
@@ -140,6 +143,12 @@ export default function BoardPage() {
   } | null>(null)
   const [linkSuccess, setLinkSuccess]       = useState<string | null>(null)
   const [selfLinkWarning, setSelfLinkWarning] = useState(false)
+  const [restoreDialogState, setRestoreDialogState] = useState<{
+    taskId: string
+    newStatus: TaskStatus
+    taskTitle: string
+    payload: CascadeResult
+  } | null>(null)
   const tasksSnapshot = useRef<BoardTask[]>([])
   const creatingRef   = useRef(false)
 
@@ -164,7 +173,7 @@ export default function BoardPage() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'tasks', filter: `board_id=eq.${boardId}` },
-        () => { if (!activeId) loadTasks(boardId) },
+        () => { if (!activeId) loadTasks(boardId, true) },
       )
       .subscribe()
     return () => { supabase.removeChannel(channel) }
@@ -180,8 +189,8 @@ export default function BoardPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [linkingState])
 
-  async function loadTasks(id: string) {
-    setLoadingTasks(true)
+  async function loadTasks(id: string, silent = false) {
+    if (!silent) setLoadingTasks(true)
     const { data, error } = await supabase
       .from('tasks')
       .select('*, task_labels(labels(name, color))')
@@ -388,7 +397,7 @@ export default function BoardPage() {
 
     // Single authoritative refresh — avoids a race where realtime's loadTasks
     // completes between this point and a manual setTasks append, producing duplicates.
-    await loadTasks(boardId)
+    await loadTasks(boardId, true)
     creatingRef.current = false
   }
 
@@ -445,7 +454,7 @@ export default function BoardPage() {
     if (!boardId) return
     await supabase.from('task_relationships').delete().eq('from_task_id', fromTaskId).eq('to_task_id', toTaskId)
     await supabase.from('task_relationships').delete().eq('from_task_id', toTaskId).eq('to_task_id', fromTaskId)
-    await loadTasks(boardId)
+    await loadTasks(boardId, true)
   }
 
   function handleEnterLinkMode(
@@ -484,7 +493,7 @@ export default function BoardPage() {
     setLinkSuccess(`KAN-${fromRefKey} "${linkLabel}" ↔ KAN-${targetTask.refKey}`)
     setTimeout(() => setLinkSuccess(null), 2200)
 
-    await loadTasks(boardId)
+    await loadTasks(boardId, true)
   }
 
   /* ── Drag handlers ─────────────────────────────────── */
@@ -559,6 +568,56 @@ export default function BoardPage() {
 
     const originalTask = tasksSnapshot.current.find((t) => t.id === activeTaskId)
     const statusChanged = originalTask?.status !== activeTask.status
+
+    // ── Completing a task ──────────────────────────────────────────────────
+    if (statusChanged && activeTask.status === 'completed' && originalTask) {
+      const result = await executeCompletion(activeTaskId)
+      if (result.deletedRelationships.length > 0 || result.cascadedTasks.length > 0) {
+        await supabase.from('activity_log').insert({
+          task_id:  activeTaskId,
+          actor_id: userId ?? null,
+          action:   'task_completed_cascade',
+          payload:  result as unknown as Record<string, unknown>,
+        })
+      }
+      await loadTasks(boardId, true)
+      return
+    }
+
+    // ── Un-completing a task ───────────────────────────────────────────────
+    if (statusChanged && originalTask?.status === 'completed') {
+      const { data: logEntry } = await supabase
+        .from('activity_log')
+        .select('payload')
+        .eq('task_id', activeTaskId)
+        .eq('action', 'task_completed_cascade')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      const cascadePayload = logEntry?.payload as CascadeResult | null
+
+      if (cascadePayload?.cascadedTasks?.length) {
+        setRestoreDialogState({
+          taskId:    activeTaskId,
+          newStatus: activeTask.status,
+          taskTitle: activeTask.title,
+          payload:   cascadePayload,
+        })
+        return
+      }
+
+      await executeUncompletion(
+        activeTaskId,
+        activeTask.status,
+        [],
+        cascadePayload ?? { deletedRelationships: [], cascadedTasks: [] }
+      )
+      await loadTasks(boardId, true)
+      return
+    }
+
+    // ── Normal drag / position update ──────────────────────────────────────
     const updates: PromiseLike<unknown>[] = []
 
     if (statusChanged) {
@@ -576,6 +635,22 @@ export default function BoardPage() {
     }
 
     await Promise.all(updates)
+  }
+
+  async function handleRestoreConfirm(selectedIds: string[]) {
+    if (!restoreDialogState || !boardId) return
+    const { taskId, newStatus, payload } = restoreDialogState
+    setRestoreDialogState(null)
+    await executeUncompletion(taskId, newStatus, selectedIds, payload)
+    await loadTasks(boardId, true)
+  }
+
+  async function handleRestoreCancel() {
+    if (!restoreDialogState || !boardId) return
+    const { taskId, newStatus, payload } = restoreDialogState
+    setRestoreDialogState(null)
+    await executeUncompletion(taskId, newStatus, [], payload)
+    await loadTasks(boardId, true)
   }
 
   /* ── Render ────────────────────────────────────────── */
@@ -808,6 +883,7 @@ export default function BoardPage() {
                               taskLinks.some((l) => l.fromTaskId === t.id && l.type === 'parent_of') ||
                               taskLinks.some((l) => l.toTaskId === t.id && l.type === 'subtask')
                             const isWaitingOnTask = taskLinks.some((l) => l.fromTaskId === t.id && l.type === 'waiting_on')
+                            const isCompleted = t.status === 'completed'
                             const isSelectableCard = linkingState != null && t.id !== linkingState.fromTaskId
                             return (
                               <SortableTaskCard
@@ -825,6 +901,7 @@ export default function BoardPage() {
                                 waitingCount={waitingCount}
                                 isParent={isParent}
                                 isWaitingOnTask={isWaitingOnTask}
+                                isCompleted={isCompleted}
                                 onOpen={() => {
                                   if (linkingState?.fromTaskId === t.id) {
                                     setSelfLinkWarning(true)
@@ -932,6 +1009,15 @@ export default function BoardPage() {
           />
         ) : null
       })()}
+
+      {restoreDialogState && (
+        <RestoreDialog
+          taskTitle={restoreDialogState.taskTitle}
+          cascadedTasks={restoreDialogState.payload.cascadedTasks}
+          onConfirm={handleRestoreConfirm}
+          onCancel={handleRestoreCancel}
+        />
+      )}
 
       {openTask && boardId && (
         <TaskDrawer
