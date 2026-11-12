@@ -208,7 +208,7 @@ export default function BoardPage() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'tasks', filter: `board_id=eq.${boardId}` },
-        () => { if (!activeId && !cascadeActiveRef.current) loadTasks(boardId, true) },
+        () => { if (!activeId && !cascadeActiveRef.current && !creatingRef.current) loadTasks(boardId, true) },
       )
       .subscribe()
     return () => { supabase.removeChannel(channel) }
@@ -354,17 +354,17 @@ export default function BoardPage() {
       .select()
       .single()
 
-    if (error || !row) { console.error(error); return }
+    if (error || !row) { console.error(error); creatingRef.current = false; return }
 
     // Auto-create the required details card and log task creation
-    await Promise.all([
+    const [{ error: detailsErr }, { error: logErr }] = await Promise.all([
       supabase.from('tasks').insert({
         user_id:               userId,
         board_id:              boardId,
         type:                  'context',
         status:                'context',
         title:                 `Details for '${payload.title}'`,
-        question:              '',
+        question:              payload.description || '',
         context_relation_type: 'details',
         parent_task_id:        row.id,
         position:              0,
@@ -375,6 +375,8 @@ export default function BoardPage() {
         action:   'task_created',
       }),
     ])
+    if (detailsErr) console.error('details card insert failed:', detailsErr)
+    if (logErr)     console.error('activity log insert failed:', logErr)
 
     for (const { name } of payload.labels) {
       let { data: label } = await supabase
@@ -741,6 +743,12 @@ export default function BoardPage() {
 
     if (statusChanged) {
       updates.push(supabase.from('tasks').update({ status: activeTask.status }).eq('id', activeTaskId))
+      updates.push(supabase.from('activity_log').insert({
+        task_id:  activeTaskId,
+        actor_id: userId ?? null,
+        action:   'status_changed',
+        payload:  { from: originalTask?.status, to: activeTask.status },
+      }))
     }
 
     finalTasks.filter((t) => t.status === activeTask.status).forEach((t, i) => {

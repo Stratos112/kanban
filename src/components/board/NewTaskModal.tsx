@@ -20,6 +20,7 @@ export interface NewTaskPayload {
   dueDate: string
   assigneeId: string
   labels: { name: string }[]
+  description: string
   contexts: ContextPanelData[]
 }
 
@@ -150,6 +151,33 @@ function makePanel(): PanelState {
   return { id: nextId(), text: '', relationType: 'question', linkType: 'blocking', priority: 'normal' }
 }
 
+/* ── Details side panel ──────────────────────────────── */
+interface DetailsSidePanelProps {
+  value: string
+  onChange: (val: string) => void
+  onClose: () => void
+}
+
+function DetailsSidePanel({ value, onChange, onClose }: DetailsSidePanelProps) {
+  return (
+    <div className={styles.contextPanel}>
+      <div className={styles.contextPanelHeader}>
+        <span className={styles.contextPanelTitle}>Details</span>
+        <button type="button" className={styles.contextPanelClose} onClick={onClose} aria-label="Close panel">✕</button>
+      </div>
+      <div className={styles.contextPanelBody}>
+        <textarea
+          className={styles.contextTextarea}
+          placeholder="Describe this task… (optional)"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          autoFocus
+        />
+      </div>
+    </div>
+  )
+}
+
 /* ── Side context panel ──────────────────────────────── */
 interface ContextSidePanelProps {
   panel: PanelState
@@ -208,8 +236,10 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
   const [dueDate, setDueDate]       = useState('')
   const [assigneeId, setAssigneeId] = useState('')
   const [labels, setLabels]         = useState<string[]>([])
-  const [panels, setPanels]         = useState<PanelState[]>(() => [makePanel()])
-  const [openPanelIds, setOpenPanelIds] = useState<number[]>(() => [panels[0].id])
+  const [description, setDescription] = useState('')
+  const [detailsOpen, setDetailsOpen] = useState(true)
+  const [panels, setPanels]         = useState<PanelState[]>([])
+  const [openPanelIds, setOpenPanelIds] = useState<number[]>([])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -243,7 +273,6 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
   }
 
   function handlePanelRemove(id: number) {
-    if (panels.length <= 1) return
     setPanels((prev) => prev.filter((p) => p.id !== id))
     closePanel(id)
   }
@@ -252,13 +281,14 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
     e.preventDefault()
     if (!title.trim()) return
     onSubmit({
-      title: title.trim(),
+      title:       title.trim(),
       status,
       priority,
       dueDate,
       assigneeId,
-      labels: labels.map((name) => ({ name })),
-      contexts: panels.filter((p) => p.relationType !== 'details').map((p) => ({
+      description: description.trim(),
+      labels:      labels.map((name) => ({ name })),
+      contexts:    panels.map((p) => ({
         text:         p.text,
         relationType: p.relationType,
         linkType:     p.linkType,
@@ -364,6 +394,24 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
               {/* ── Context list ── */}
               <div className={styles.contextSection}>
                 <span className={styles.contextSectionLabel}>Context</span>
+
+                {/* Required Details row — always present, no remove button */}
+                <div
+                  className={`${styles.contextRow} ${detailsOpen ? styles.contextRowActive : ''}`}
+                  onClick={() => setDetailsOpen((v) => !v)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setDetailsOpen((v) => !v) }}
+                >
+                  <span className={styles.contextRowType}>Details</span>
+                  <span className={styles.contextRowText}>
+                    {description
+                      ? description
+                      : <em className={styles.contextRowEmpty}>Description &amp; activity log…</em>
+                    }
+                  </span>
+                </div>
+
                 {panels.map((panel) => {
                   const isOpen = openPanelIds.includes(panel.id)
                   const typeLabel = CONTEXT_TYPES.find((t) => t.value === panel.relationType)?.label ?? panel.relationType
@@ -388,14 +436,12 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
                           : <em className={styles.contextRowEmpty}>No content yet…</em>
                         }
                       </span>
-                      {panels.length > 1 && (
-                        <button
-                          type="button"
-                          className={styles.contextRowRemove}
-                          onClick={(e) => { e.stopPropagation(); handlePanelRemove(panel.id) }}
-                          aria-label="Remove context"
-                        >✕</button>
-                      )}
+                      <button
+                        type="button"
+                        className={styles.contextRowRemove}
+                        onClick={(e) => { e.stopPropagation(); handlePanelRemove(panel.id) }}
+                        aria-label="Remove context"
+                      >✕</button>
                     </div>
                   )
                 })}
@@ -418,9 +464,16 @@ export default function NewTaskModal({ onClose, onSubmit, users, currentUserId }
           </form>
         </div>
 
-        {/* ── Side panels (up to 2 open at once) ── */}
-        {openPanels.length > 0 && (
+        {/* ── Side panels ── */}
+        {(detailsOpen || openPanels.length > 0) && (
           <div className={styles.panelsColumn}>
+            {detailsOpen && (
+              <DetailsSidePanel
+                value={description}
+                onChange={setDescription}
+                onClose={() => setDetailsOpen(false)}
+              />
+            )}
             {openPanels.map((panel) => (
               <ContextSidePanel
                 key={panel.id}

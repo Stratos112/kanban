@@ -5,9 +5,8 @@ import { supabase } from '../../lib/supabase'
 import styles from './ContextCardModal.module.css'
 
 const CONTEXT_TYPES = [
-  { value: 'details',    label: 'Details' },
-  { value: 'question',   label: 'Question' },
-  { value: 'assumption', label: 'Assumption' },
+  { value: 'question', label: 'Question' },
+  { value: 'comment',  label: 'Comment' },
 ]
 
 const LINK_TYPES = [
@@ -23,9 +22,45 @@ const PRIORITIES = [
 ]
 
 const PLACEHOLDERS: Record<string, string> = {
-  details:    'Add notes, comments, or descriptions…',
-  question:   'State what you want to find out…',
-  assumption: 'Describe what you\'re assuming to be true…',
+  details:  'Describe this task…',
+  question: 'State what you want to find out…',
+  comment:  'Add a note or comment…',
+}
+
+interface ActivityEntry {
+  id: string
+  action: string
+  payload: Record<string, unknown> | null
+  created_at: string
+}
+
+function formatActivity(entry: ActivityEntry): string {
+  const p = entry.payload ?? {}
+  switch (entry.action) {
+    case 'task_created':     return 'Task created'
+    case 'title_edited':     return 'Title updated'
+    case 'status_changed':   return `Status: ${p.from} → ${p.to}`
+    case 'priority_changed': return `Priority: ${p.from} → ${p.to}`
+    case 'assigned':         return `Assigned to ${p.name}`
+    case 'unassigned':       return 'Unassigned'
+    case 'due_date_set':     return `Due date: ${p.to}`
+    case 'due_date_cleared': return 'Due date removed'
+    case 'comment_added':    return 'Comment added'
+    case 'question_added':   return 'Question added'
+    default:                 return entry.action.replace(/_/g, ' ')
+  }
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 30) return `${days}d ago`
+  return new Date(iso).toLocaleDateString()
 }
 
 interface Props {
@@ -41,6 +76,9 @@ export default function ContextCardModal({ card, parentTask, onClose, onUpdate }
   const [priority, setPriority]         = useState<TaskPriority>(card.priority)
   const [text, setText]                 = useState(card.question)
   const [answer, setAnswer]             = useState(card.answer ?? '')
+  const [activityLog, setActivityLog]   = useState<ActivityEntry[]>([])
+
+  const isDetails = relationType === 'details'
 
   useEffect(() => {
     setRelationType(card.relationType)
@@ -49,6 +87,16 @@ export default function ContextCardModal({ card, parentTask, onClose, onUpdate }
     setText(card.question)
     setAnswer(card.answer ?? '')
   }, [card.id])
+
+  useEffect(() => {
+    if (!isDetails || !card.parentTaskId) return
+    supabase
+      .from('activity_log')
+      .select('id, action, payload, created_at')
+      .eq('task_id', card.parentTaskId)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setActivityLog((data as ActivityEntry[]) ?? []))
+  }, [card.id, isDetails])
 
   /* Capture-phase listener fires before the TaskDrawer's bubble-phase listener,
      so Escape only closes this modal and not the drawer behind it. */
@@ -93,8 +141,6 @@ export default function ContextCardModal({ card, parentTask, onClose, onUpdate }
 
   async function handleDone() {
     await Promise.all([saveText(), saveAnswer()])
-    // Always push current answer to parent so the card redraws regardless of
-    // whether saveAnswer's early-return guard fired.
     onUpdate(card.id, { answer: answer.trim() || undefined })
     onClose()
   }
@@ -120,15 +166,19 @@ export default function ContextCardModal({ card, parentTask, onClose, onUpdate }
         </div>
 
         <div className={styles.meta}>
-          <select
-            className={styles.relSelect}
-            value={relationType}
-            onChange={(e) => saveRelationType(e.target.value)}
-          >
-            {CONTEXT_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
+          {isDetails ? (
+            <span className={styles.detailsTypeBadge}>Details</span>
+          ) : (
+            <select
+              className={styles.relSelect}
+              value={relationType}
+              onChange={(e) => saveRelationType(e.target.value)}
+            >
+              {CONTEXT_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          )}
           {isQuestion && (
             <select
               className={styles.linkSelect}
@@ -140,15 +190,17 @@ export default function ContextCardModal({ card, parentTask, onClose, onUpdate }
               ))}
             </select>
           )}
-          <select
-            className={styles.linkSelect}
-            value={priority}
-            onChange={(e) => savePriority(e.target.value as TaskPriority)}
-          >
-            {PRIORITIES.map((p) => (
-              <option key={p.value} value={p.value}>{p.label}</option>
-            ))}
-          </select>
+          {!isDetails && (
+            <select
+              className={styles.linkSelect}
+              value={priority}
+              onChange={(e) => savePriority(e.target.value as TaskPriority)}
+            >
+              {PRIORITIES.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+          )}
           {card.labels.length > 0 && (
             <div className={styles.labelChips}>
               {card.labels.map((l) => (
@@ -171,7 +223,7 @@ export default function ContextCardModal({ card, parentTask, onClose, onUpdate }
             value={text}
             onChange={(e) => setText(e.target.value)}
             onBlur={saveText}
-            rows={5}
+            rows={isDetails ? 4 : 5}
             autoFocus
           />
           {isQuestion && (
@@ -186,6 +238,23 @@ export default function ContextCardModal({ card, parentTask, onClose, onUpdate }
                 rows={3}
               />
             </div>
+          )}
+          {isDetails && (
+            <>
+              <span className={styles.activityLogLabel}>Activity</span>
+              <div className={styles.activityLog}>
+                {activityLog.length === 0 ? (
+                  <p className={styles.activityEmpty}>No activity yet.</p>
+                ) : (
+                  activityLog.map((entry) => (
+                    <div key={entry.id} className={styles.activityEntry}>
+                      <span className={styles.activityText}>{formatActivity(entry)}</span>
+                      <span className={styles.activityTime}>{timeAgo(entry.created_at)}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           )}
         </div>
 
