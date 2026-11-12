@@ -22,7 +22,7 @@ import { useAuth } from '../lib/AuthContext'
 import { getBoardBySlug } from '../lib/boards'
 import { supabase } from '../lib/supabase'
 import styles from './BoardPage.module.css'
-import type { TaskPriority, TaskStatus } from '../lib/database.types'
+import type { TaskPriority, TaskStatus, RelationshipType } from '../lib/database.types'
 
 const COLUMNS: { key: TaskStatus; label: string; accent: string }[] = [
   { key: 'backlog',     label: 'Backlog',     accent: 'var(--color-col-backlog)' },
@@ -190,7 +190,10 @@ export default function BoardPage() {
 
     if (error) { console.error(error); setLoadingTasks(false); return }
 
-    const rows = data ?? []
+    // Cast away the join inference type — the nested task_labels select isn't
+    // reflected in the generated schema's Relationships, so TypeScript can't
+    // infer it; the runtime shape is correct and accessed via `as any` below.
+    const rows = (data ?? []) as any[]
 
     // Fetch profiles for everyone active on this board (task creators + assignees + self)
     const profileIds = [...new Set([
@@ -440,10 +443,8 @@ export default function BoardPage() {
 
   async function handleDeleteLink(fromTaskId: string, toTaskId: string) {
     if (!boardId) return
-    await Promise.all([
-      supabase.from('task_relationships').delete().eq('from_task_id', fromTaskId).eq('to_task_id', toTaskId),
-      supabase.from('task_relationships').delete().eq('from_task_id', toTaskId).eq('to_task_id', fromTaskId),
-    ])
+    await supabase.from('task_relationships').delete().eq('from_task_id', fromTaskId).eq('to_task_id', toTaskId)
+    await supabase.from('task_relationships').delete().eq('from_task_id', toTaskId).eq('to_task_id', fromTaskId)
     await loadTasks(boardId)
   }
 
@@ -467,12 +468,12 @@ export default function BoardPage() {
       supabase.from('task_relationships').insert({
         from_task_id: fromTaskId,
         to_task_id:   targetTask.id,
-        type:         linkType,
+        type:         linkType as RelationshipType,
       }),
       supabase.from('task_relationships').insert({
         from_task_id: targetTask.id,
         to_task_id:   fromTaskId,
-        type:         inverseType,
+        type:         inverseType as RelationshipType,
       }),
     ])
 
@@ -558,7 +559,7 @@ export default function BoardPage() {
 
     const originalTask = tasksSnapshot.current.find((t) => t.id === activeTaskId)
     const statusChanged = originalTask?.status !== activeTask.status
-    const updates: Promise<unknown>[] = []
+    const updates: PromiseLike<unknown>[] = []
 
     if (statusChanged) {
       updates.push(supabase.from('tasks').update({ status: activeTask.status }).eq('id', activeTaskId))

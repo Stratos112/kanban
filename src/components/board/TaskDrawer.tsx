@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { BoardTask, ContextCard, BoardUser, TaskLink } from '../../pages/BoardPage'
+import type { BoardTask, ContextCard, BoardUser } from '../../pages/BoardPage'
 import type { TaskPriority, TaskStatus } from '../../lib/database.types'
 import { supabase } from '../../lib/supabase'
 import TaskCard from './TaskCard'
