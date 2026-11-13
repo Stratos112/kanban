@@ -23,7 +23,8 @@ interface TeamMember {
 }
 
 export default function ProfilePage() {
-  const { profile, userId, loading, isGuest, setProfile, hideOthers, setHideOthers, signOut, refreshTeammates } = useAuth()
+  const { profile, userId, loading, isGuest, setProfile, hideOthers, setHideOthers, teammateIds, signOut, refreshTeammates } = useAuth()
+  const isInTeam = teammateIds.size > 0
   const [name, setName] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null)
@@ -38,6 +39,7 @@ export default function ProfilePage() {
   const [boardMembers, setBoardMembers] = useState<TeamMember[]>([])
   const [teamLoading, setTeamLoading] = useState(false)
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
+  const [confirmLeave, setConfirmLeave] = useState(false)
 
   useEffect(() => {
     if (profile) setName(profile.display_name)
@@ -92,7 +94,8 @@ export default function ProfilePage() {
   }, [userId])
 
   useEffect(() => {
-    if (!userId || activeTab !== 'team') return
+    if (activeTab !== 'team') { setConfirmLeave(false); return }
+    if (!userId) return
     loadTeamTabData()
   }, [userId, activeTab])
 
@@ -162,6 +165,16 @@ export default function ProfilePage() {
     await supabase.from('profiles').update({ avatar_color: color }).eq('id', userId)
   }
 
+  async function handleTeamColorChange(color: string) {
+    if (!userId || !profile) return
+    setProfile({ ...profile, avatar_color: color })
+    setTeammates((prev) => prev.map((m) => ({ ...m, color })))
+    const allIds = [userId, ...teammates.map((m) => m.id)]
+    await Promise.all(
+      allIds.map((id) => supabase.from('profiles').update({ avatar_color: color }).eq('id', id))
+    )
+  }
+
   async function handleInvite(memberId: string) {
     if (!userId || !profile) return
     setInvitedIds((prev) => new Set([...prev, memberId]))
@@ -190,6 +203,22 @@ export default function ProfilePage() {
     const remaining = pendingInvites.filter((i) => i.id !== inviteId)
     setPendingInvites(remaining)
     if (remaining.length === 0) setShowInvitePopup(false)
+  }
+
+  async function handleLeaveTeam() {
+    if (!userId) return
+    const db = supabase as any
+    // Remove all invite rows this user is part of (as inviter or accepted invitee)
+    await Promise.all([
+      db.from('team_invites').delete()
+        .eq('inviter_id', userId).in('status', ['accepted', 'pending']),
+      db.from('team_invites').delete()
+        .eq('invitee_id', userId).eq('status', 'accepted'),
+    ])
+    setTeammates([])
+    setInvitedIds(new Set())
+    await refreshTeammates()
+    loadTeamTabData()
   }
 
   return (
@@ -235,18 +264,18 @@ export default function ProfilePage() {
                   <div className={styles.avatarWrap}>
                     <div
                       ref={avatarRef}
-                      className={styles.avatar}
+                      className={`${styles.avatar} ${isInTeam ? styles.avatarLocked : ''}`}
                       style={{ background: profile?.avatar_color ?? '#6366f1' }}
-                      aria-label="Pick avatar color"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => {
+                      aria-label={isInTeam ? 'Color managed by team' : 'Pick avatar color'}
+                      role={isInTeam ? undefined : 'button'}
+                      tabIndex={isInTeam ? undefined : 0}
+                      onClick={isInTeam ? undefined : () => {
                         if (pickerOpen) { setPickerOpen(false); return }
                         const rect = avatarRef.current?.getBoundingClientRect()
                         if (rect) setPickerPos({ top: rect.bottom + 10, left: rect.left + rect.width / 2 })
                         setPickerOpen(true)
                       }}
-                      onKeyDown={(e) => {
+                      onKeyDown={isInTeam ? undefined : (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           const rect = avatarRef.current?.getBoundingClientRect()
                           if (rect) setPickerPos({ top: rect.bottom + 10, left: rect.left + rect.width / 2 })
@@ -254,7 +283,15 @@ export default function ProfilePage() {
                         }
                       }}
                     />
-                    {pickerOpen && pickerPos && (
+                    {isInTeam && (
+                      <span
+                        className={styles.avatarLockNote}
+                        onClick={() => setActiveTab('team')}
+                      >
+                        Team tab
+                      </span>
+                    )}
+                    {!isInTeam && pickerOpen && pickerPos && (
                       <div
                         ref={pickerRef}
                         className={styles.picker}
@@ -376,18 +413,76 @@ export default function ProfilePage() {
             ) : (
               <>
                 {teammates.length > 0 && (
-                  <section className={styles.card}>
-                    <h2 className={styles.sectionTitle}>Your teammates</h2>
-                    <div className={styles.memberList}>
-                      {teammates.map((m) => (
-                        <div key={m.id} className={styles.memberRow}>
-                          <div className={styles.memberAvatar} style={{ background: m.color }} />
-                          <span className={styles.memberName}>{m.name}</span>
-                          <span className={styles.memberTeamChip}>Teammate</span>
+                  <>
+                    <section className={styles.card}>
+                      <h2 className={styles.sectionTitle}>Your teammates</h2>
+                      <div className={styles.memberList}>
+                        {teammates.map((m) => (
+                          <div key={m.id} className={styles.memberRow}>
+                            <div className={styles.memberAvatar} style={{ background: m.color }} />
+                            <span className={styles.memberName}>{m.name}</span>
+                            <span className={styles.memberTeamChip}>Teammate</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className={styles.leaveRow}>
+                        {confirmLeave ? (
+                          <>
+                            <span className={styles.leaveConfirmText}>Leave team?</span>
+                            <button
+                              type="button"
+                              className={styles.leaveConfirmBtn}
+                              onClick={() => { setConfirmLeave(false); handleLeaveTeam() }}
+                            >
+                              Yes, leave
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.leaveCancelBtn}
+                              onClick={() => setConfirmLeave(false)}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            className={styles.leaveBtn}
+                            onClick={() => setConfirmLeave(true)}
+                          >
+                            Leave team
+                          </button>
+                        )}
+                      </div>
+                    </section>
+
+                    <section className={styles.card}>
+                      <h2 className={styles.sectionTitle}>Team color</h2>
+                      <p className={styles.teamColorNote}>
+                        Changing this updates everyone's avatar at once.
+                      </p>
+                      <div className={styles.teamColorRow}>
+                        <div
+                          className={styles.teamColorSwatch}
+                          style={{ background: profile?.avatar_color ?? '#6366f1' }}
+                        />
+                        <div className={styles.teamColorPalette}>
+                          {PALETTE.map((c) => (
+                            <button
+                              key={c}
+                              className={styles.swatch}
+                              style={{ background: c }}
+                              aria-label={c}
+                              aria-pressed={profile?.avatar_color === c}
+                              onClick={() => handleTeamColorChange(c)}
+                            >
+                              {profile?.avatar_color === c && <span className={styles.swatchCheck}>✓</span>}
+                            </button>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </section>
+                      </div>
+                    </section>
+                  </>
                 )}
 
                 <section className={styles.card}>

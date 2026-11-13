@@ -92,6 +92,29 @@
   transform: scale(1.05);
 }
 
+.avatarLocked {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.avatarLocked:hover {
+  border-color: var(--color-border);
+  transform: none;
+}
+
+.avatarLockNote {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-subtle);
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 /* Color picker popover */
 .picker {
   position: fixed;
@@ -610,4 +633,88 @@
 .inviteDeclineBtn:hover {
   color: var(--color-text);
   border-color: var(--color-text-subtle);
+}
+
+/* ── Leave team ──────────────────────────────────── */
+.leaveRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  margin-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.leaveBtn {
+  font-size: 12px;
+  color: var(--color-text-subtle);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.leaveBtn:hover { color: #f43f5e; }
+
+.leaveConfirmText {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  flex: 1;
+}
+
+.leaveConfirmBtn {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(244,63,94,0.5);
+  background: none;
+  color: #f43f5e;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.leaveConfirmBtn:hover { background: rgba(244,63,94,0.1); }
+
+.leaveCancelBtn {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-subtle);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.leaveCancelBtn:hover { color: var(--color-text-muted); }
+
+/* ── Team color picker ───────────────────────────── */
+.teamColorNote {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+}
+
+.teamColorRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.teamColorSwatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,0.15);
+}
+
+.teamColorPalette {
+  display: grid;
+  grid-template-columns: repeat(10, 28px);
+  gap: 8px;
 }
