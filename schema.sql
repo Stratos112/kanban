@@ -68,7 +68,8 @@ create table labels (
   board_id   uuid        references boards(id) on delete cascade,
   name       text        not null,
   color      text        not null default '#6366f1',
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique (board_id, name)
 );
 
 -- Task ↔ Label (many-to-many)
