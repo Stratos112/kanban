@@ -40,6 +40,7 @@ export default function ProfilePage() {
   const [teamLoading, setTeamLoading] = useState(false)
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const teammatesRef = useRef<TeamMember[]>([])
 
   useEffect(() => {
     if (profile) setName(profile.display_name)
@@ -99,6 +100,31 @@ export default function ProfilePage() {
     loadTeamTabData()
   }, [userId, activeTab])
 
+  // Live-sync teammate avatar colors while the Team tab is open
+  useEffect(() => {
+    if (activeTab !== 'team' || teammates.length === 0) return
+    const idSet = new Set(teammates.map((m) => m.id))
+    const channel = supabase
+      .channel(`teammate-profiles-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles' },
+        (payload) => {
+          const p = payload.new as { id: string; avatar_color: string }
+          if (idSet.has(p.id)) {
+            setTeammates((prev) =>
+              prev.map((m) => m.id === p.id ? { ...m, color: p.avatar_color } : m)
+            )
+            teammatesRef.current = teammatesRef.current.map((m) =>
+              m.id === p.id ? { ...m, color: p.avatar_color } : m
+            )
+          }
+        },
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [activeTab, teammates.map((m) => m.id).join(',')])
+
   async function loadTeamTabData() {
     if (!userId) return
     setTeamLoading(true)
@@ -137,19 +163,22 @@ export default function ProfilePage() {
 
     const teammateSet = new Set(teammateIdList)
 
-    setTeammates(
-      teammateIdList.map((id) => ({
-        id,
-        name: profileMap.get(id)?.name ?? 'Unknown',
-        color: profileMap.get(id)?.color ?? '#6366f1',
-      }))
-    )
+    const newTeammates = teammateIdList.map((id) => ({
+      id,
+      name: profileMap.get(id)?.name ?? 'Unknown',
+      color: profileMap.get(id)?.color ?? '#6366f1',
+    }))
+    setTeammates(newTeammates)
+    teammatesRef.current = newTeammates
     setBoardMembers(
       (otherProfiles ?? [])
         .filter((p) => !teammateSet.has(p.id) && !pendingOutgoing.has(p.id))
         .map((p) => ({ id: p.id, name: p.display_name, color: p.avatar_color }))
     )
     setInvitedIds(pendingOutgoing)
+    // Always sync AuthContext so the inviter's lock state stays current
+    // (their teammateIds may be stale if the invitee accepted after page load)
+    await refreshTeammates()
     setTeamLoading(false)
   }
 
@@ -167,9 +196,11 @@ export default function ProfilePage() {
 
   async function handleTeamColorChange(color: string) {
     if (!userId || !profile) return
+    const currentTeammates = teammatesRef.current
     setProfile({ ...profile, avatar_color: color })
     setTeammates((prev) => prev.map((m) => ({ ...m, color })))
-    const allIds = [userId, ...teammates.map((m) => m.id)]
+    teammatesRef.current = currentTeammates.map((m) => ({ ...m, color }))
+    const allIds = [userId, ...currentTeammates.map((m) => m.id)]
     await Promise.all(
       allIds.map((id) => supabase.from('profiles').update({ avatar_color: color }).eq('id', id))
     )
@@ -216,6 +247,7 @@ export default function ProfilePage() {
         .eq('invitee_id', userId).eq('status', 'accepted'),
     ])
     setTeammates([])
+    teammatesRef.current = []
     setInvitedIds(new Set())
     await refreshTeammates()
     loadTeamTabData()
