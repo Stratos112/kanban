@@ -376,8 +376,10 @@ export default function TaskDrawer({
                 onChange={(e) => saveAssignee(e.target.value)}
               >
                 <option value="">Unassigned</option>
-                {users.filter((u) => u.id === currentUserId).map((u) => (
-                  <option key={u.id} value={u.id}>{u.displayName} (you)</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.displayName}{u.id === currentUserId ? ' (you)' : ''}
+                  </option>
                 ))}
               </select>
             </div>
