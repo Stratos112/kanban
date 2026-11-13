@@ -1,4 +1,4 @@
-import { NavLink, useParams } from 'react-router-dom'
+import { NavLink, Link, useParams } from 'react-router-dom'
 import { LayoutDashboard, User, SlidersHorizontal, BarChart2 } from 'lucide-react'
 import { useAuth } from '../../lib/AuthContext'
 import styles from './Sidebar.module.css'
@@ -10,7 +10,7 @@ export default function Sidebar() {
 
   return (
     <nav className={styles.sidebar} aria-label="Main navigation">
-      <div className={styles.logo}>K</div>
+      <Link to="/" className={styles.logo} aria-label="All boards">K</Link>
 
       <NavLink
         to={`${base}/profile`}

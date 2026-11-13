@@ -279,7 +279,7 @@
 }
 
 .dueDate[data-overdue='true'] {
-  color: var(--color-danger);
+  color: var(--color-overdue);
 }
 
 .avatar {

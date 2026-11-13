@@ -143,7 +143,12 @@ export default function TaskCard({
         </div>
         <div className={styles.meta}>
           {dueDate && (
-            <span className={styles.dueDate}>{formatDate(dueDate)}</span>
+            <span
+              className={styles.dueDate}
+              data-overdue={dueDays(dueDate) < 0 ? 'true' : undefined}
+            >
+              {formatDate(dueDate)}
+            </span>
           )}
           {assigneeColor ? (
             <span
@@ -178,13 +183,14 @@ export default function TaskCard({
   )
 }
 
+function dueDays(iso: string) {
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
+}
+
 function formatDate(iso: string) {
-  const d = new Date(iso)
-  const now = new Date()
-  const diff = d.getTime() - now.getTime()
-  const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+  const days = dueDays(iso)
   if (days < 0) return 'Overdue'
   if (days === 0) return 'Today'
   if (days === 1) return 'Tomorrow'
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }

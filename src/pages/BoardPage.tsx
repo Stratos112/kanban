@@ -122,7 +122,7 @@ function ColumnBody({
 /* ── Page ────────────────────────────────────────────── */
 export default function BoardPage() {
   const { slug } = useParams<{ slug: string }>()
-  const { userId, loading: authLoading, hideOthers, setHideOthers } = useAuth()
+  const { userId, loading: authLoading, hideOthers, setHideOthers, teammateIds } = useAuth()
 
   const [boardId, setBoardId]             = useState<string | null>(null)
   const [boardName, setBoardName]         = useState('')
@@ -814,11 +814,46 @@ export default function BoardPage() {
     await supabase.from('tasks').update({ assignee_id: userId }).eq('id', taskId)
   }
 
+  /* ── Search ────────────────────────────────────────── */
+  const [searchQuery, setSearchQuery] = useState('')
+
+  /* ── Label filter ──────────────────────────────────── */
+  const [boardLabels, setBoardLabels]   = useState<{ id: string; name: string; color: string }[]>([])
+  const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set())
+  const [labelsOpen, setLabelsOpen]     = useState(false)
+  const labelsRef                       = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!boardId) return
+    supabase.from('labels').select('id, name, color').eq('board_id', boardId).order('name')
+      .then(({ data }) => setBoardLabels(data ?? []))
+  }, [boardId])
+
+  useEffect(() => {
+    if (!labelsOpen) return
+    function onDown(e: MouseEvent) {
+      if (labelsRef.current && !labelsRef.current.contains(e.target as Node)) setLabelsOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [labelsOpen])
+
+  function toggleLabel(name: string) {
+    setSelectedLabels((prev) => {
+      const next = new Set(prev)
+      next.has(name) ? next.delete(name) : next.add(name)
+      return next
+    })
+  }
+
   /* ── Render ────────────────────────────────────────── */
+  const searchLower = searchQuery.toLowerCase()
   const tasksInColumn = (status: TaskStatus) =>
     tasks.filter((t) => {
       if (t.status !== status) return false
-      if (hideOthers && t.assignee && t.assignee.id !== userId) return false
+      if (hideOthers && t.assignee && t.assignee.id !== userId && !teammateIds.has(t.assignee.id)) return false
+      if (selectedLabels.size > 0 && !t.labels.some((l) => selectedLabels.has(l.name))) return false
+      if (searchLower && !t.title.toLowerCase().includes(searchLower)) return false
       return true
     })
   const activeTask    = activeId ? tasks.find((t) => t.id === activeId) ?? null : null
@@ -865,8 +900,6 @@ export default function BoardPage() {
         <div className={styles.headerLeft}>
           <h1 className={styles.title}>{boardName || 'Board'}</h1>
           <span className={styles.taskCount}>{tasks.length} tasks</span>
-        </div>
-        <div className={styles.headerRight}>
           <button
             type="button"
             className={`${styles.focusToggle} ${hideOthers ? styles.focusToggleOn : ''}`}
@@ -874,8 +907,60 @@ export default function BoardPage() {
             title={hideOthers ? 'Focus mode on — click to show all tasks' : 'Focus mode off — click to show only your tasks'}
           >
             <span className={styles.focusDot} />
-            Focus
+            {hideOthers ? 'Focus' : 'Global'}
           </button>
+        </div>
+        <div className={styles.headerRight}>
+          <input
+            className={styles.search}
+            type="search"
+            placeholder="Search tasks…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+
+          {boardLabels.length > 0 && (
+            <div className={styles.labelsDropdown} ref={labelsRef}>
+              <button
+                type="button"
+                className={`${styles.labelsBtn} ${selectedLabels.size > 0 ? styles.labelsBtnActive : ''}`}
+                onClick={() => setLabelsOpen((o) => !o)}
+              >
+                Labels
+                {selectedLabels.size > 0 && <span className={styles.labelsBadge}>{selectedLabels.size}</span>}
+                <span className={styles.labelsCaret}>▾</span>
+              </button>
+              {labelsOpen && (
+                <div className={styles.labelsPanel}>
+                  {boardLabels.map((l) => {
+                    const active = selectedLabels.has(l.name)
+                    return (
+                      <button
+                        key={l.id}
+                        type="button"
+                        className={`${styles.labelOption} ${active ? styles.labelOptionActive : ''}`}
+                        onClick={() => toggleLabel(l.name)}
+                      >
+                        <span className={styles.labelOptionDot} style={{ background: l.color }} />
+                        <span className={styles.labelOptionName}>{l.name}</span>
+                        {active && <span className={styles.labelOptionCheck}>✓</span>}
+                      </button>
+                    )
+                  })}
+                  {selectedLabels.size > 0 && (
+                    <button
+                      type="button"
+                      className={styles.labelsClearBtn}
+                      onClick={() => { setSelectedLabels(new Set()); setLabelsOpen(false) }}
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <button
             className={styles.addButton}
             type="button"
@@ -1151,7 +1236,7 @@ export default function BoardPage() {
               <span className={styles.columnLabel}>Context</span>
               <span className={styles.columnCount}>{contextCards.filter((c) => {
                 const p = tasks.find((t) => t.id === c.parentTaskId)
-                return !(hideOthers && p?.assignee && p.assignee.id !== userId)
+                return !(hideOthers && p?.assignee && p.assignee.id !== userId && !teammateIds.has(p.assignee.id))
               }).length}</span>
             </div>
             <div className={styles.columnBody}>
@@ -1163,7 +1248,7 @@ export default function BoardPage() {
                       const parent = tasks.find((t) => t.id === c.parentTaskId)
                       const isPopping = poppingContextIds.has(c.id)
                       if (parent?.status === 'completed' && !isPopping && parent?.id !== activeId) return null
-                      if (hideOthers && parent?.assignee && parent.assignee.id !== userId) return null
+                      if (hideOthers && parent?.assignee && parent.assignee.id !== userId && !teammateIds.has(parent.assignee.id)) return null
                       return (
                         <div
                           key={c.id}
