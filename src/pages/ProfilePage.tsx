@@ -101,7 +101,7 @@ export default function ProfilePage() {
     setTeamLoading(true)
 
     const db = supabase as any
-    const [{ data: acceptedRaw }, { data: outgoingRaw }, { data: myTasks }] = await Promise.all([
+    const [{ data: acceptedRaw }, { data: outgoingRaw }] = await Promise.all([
       db
         .from('team_invites')
         .select('inviter_id, invitee_id')
@@ -112,8 +112,6 @@ export default function ProfilePage() {
         .select('invitee_id')
         .eq('inviter_id', userId)
         .eq('status', 'pending'),
-      supabase
-        .from('tasks').select('board_id').eq('user_id', userId).limit(1),
     ])
     const accepted = acceptedRaw as { inviter_id: string; invitee_id: string }[] | null
     const outgoing = outgoingRaw as { invitee_id: string }[] | null
@@ -122,23 +120,16 @@ export default function ProfilePage() {
       r.inviter_id === userId ? r.invitee_id : r.inviter_id
     )
     const pendingOutgoing = new Set((outgoing ?? []).map((r) => r.invitee_id as string))
-    const boardId = (myTasks as { board_id: string }[] | null)?.[0]?.board_id
 
-    let potentialIds: string[] = []
-    if (boardId) {
-      const { data: memberRows } = await supabase
-        .from('tasks').select('user_id').eq('board_id', boardId).neq('user_id', userId)
-      potentialIds = [...new Set((memberRows ?? []).map((r) => (r as { user_id: string }).user_id))]
-    }
+    // Query all other profiles — anyone who has authenticated shows up here
+    const { data: otherProfiles } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_color')
+      .neq('id', userId)
 
-    const allIds = [...new Set([...teammateIdList, ...potentialIds])]
     const profileMap = new Map<string, { name: string; color: string }>()
-    if (allIds.length > 0) {
-      const { data: profiles } = await supabase
-        .from('profiles').select('id, display_name, avatar_color').in('id', allIds)
-      for (const p of profiles ?? []) {
-        profileMap.set(p.id, { name: p.display_name, color: p.avatar_color })
-      }
+    for (const p of otherProfiles ?? []) {
+      profileMap.set(p.id, { name: p.display_name, color: p.avatar_color })
     }
 
     const teammateSet = new Set(teammateIdList)
@@ -151,13 +142,9 @@ export default function ProfilePage() {
       }))
     )
     setBoardMembers(
-      potentialIds
-        .filter((id) => !teammateSet.has(id) && !pendingOutgoing.has(id))
-        .map((id) => ({
-          id,
-          name: profileMap.get(id)?.name ?? 'Unknown',
-          color: profileMap.get(id)?.color ?? '#6366f1',
-        }))
+      (otherProfiles ?? [])
+        .filter((p) => !teammateSet.has(p.id) && !pendingOutgoing.has(p.id))
+        .map((p) => ({ id: p.id, name: p.display_name, color: p.avatar_color }))
     )
     setInvitedIds(pendingOutgoing)
     setTeamLoading(false)
@@ -178,14 +165,10 @@ export default function ProfilePage() {
   async function handleInvite(memberId: string) {
     if (!userId || !profile) return
     setInvitedIds((prev) => new Set([...prev, memberId]))
-    const { data: myTasks } = await supabase
-      .from('tasks').select('board_id').eq('user_id', userId).limit(1)
-    const boardId = (myTasks as { board_id: string }[] | null)?.[0]?.board_id ?? null
     await (supabase as any).from('team_invites').insert({
       inviter_id: userId,
       invitee_id: memberId,
       inviter_color: profile.avatar_color,
-      board_id: boardId,
     })
   }
 
