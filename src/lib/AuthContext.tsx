@@ -93,22 +93,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Keep own profile in sync when a teammate updates our avatar_color via team color change
-  useEffect(() => {
-    if (!state.userId) return
-    const channel = supabase
-      .channel(`profile-sync-${state.userId}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${state.userId}` },
-        (payload) => {
-          setState((s) => ({ ...s, profile: payload.new as Profile }))
-        },
-      )
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [state.userId])
-
   const setProfile = (p: Profile) => setState((s) => ({ ...s, profile: p }))
 
   const setHideOthers = (v: boolean) => {

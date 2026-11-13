@@ -41,8 +41,11 @@ export default function ProfilePage() {
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [confirmLeave, setConfirmLeave] = useState(false)
   const teammatesRef = useRef<TeamMember[]>([])
+  const profileRef = useRef(profile)
+  const broadcastRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   useEffect(() => {
+    profileRef.current = profile
     if (profile) setName(profile.display_name)
   }, [profile])
 
@@ -100,34 +103,36 @@ export default function ProfilePage() {
     loadTeamTabData()
   }, [userId, activeTab])
 
-  // Live-sync teammate avatar colors while the Team tab is open
+  // Broadcast channel — persistent so we can receive AND send team color changes
   useEffect(() => {
-    if (activeTab !== 'team' || teammates.length === 0) return
-    const idSet = new Set(teammates.map((m) => m.id))
-    const channel = supabase
-      .channel(`teammate-profiles-${userId}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles' },
-        (payload) => {
-          const p = payload.new as { id: string; avatar_color: string }
-          if (idSet.has(p.id)) {
-            setTeammates((prev) =>
-              prev.map((m) => m.id === p.id ? { ...m, color: p.avatar_color } : m)
-            )
-            teammatesRef.current = teammatesRef.current.map((m) =>
-              m.id === p.id ? { ...m, color: p.avatar_color } : m
-            )
-          }
-        },
-      )
+    if (!userId) return
+    const ch = supabase
+      .channel('team-color-broadcast')
+      .on('broadcast', { event: 'team_color' }, ({ payload }) => {
+        const { color, memberIds } = payload as { color: string; memberIds: string[] }
+        if (memberIds.includes(userId) && profileRef.current) {
+          setProfile({ ...profileRef.current, avatar_color: color })
+        }
+        setTeammates((prev) => prev.map((m) =>
+          memberIds.includes(m.id) ? { ...m, color } : m
+        ))
+        teammatesRef.current = teammatesRef.current.map((m) =>
+          memberIds.includes(m.id) ? { ...m, color } : m
+        )
+      })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [activeTab, teammates.map((m) => m.id).join(',')])
+    broadcastRef.current = ch
+    return () => { supabase.removeChannel(ch); broadcastRef.current = null }
+  }, [userId])
 
   async function loadTeamTabData() {
     if (!userId) return
     setTeamLoading(true)
+
+    // Always re-fetch own profile so the color picker reflects any changes made by teammates
+    const { data: myProfile } = await supabase
+      .from('profiles').select('*').eq('id', userId).single()
+    if (myProfile) setProfile(myProfile as import('../lib/database.types').Profile)
 
     const db = supabase as any
     const [{ data: acceptedRaw }, { data: outgoingRaw }] = await Promise.all([
@@ -204,6 +209,12 @@ export default function ProfilePage() {
     await Promise.all(
       allIds.map((id) => supabase.from('profiles').update({ avatar_color: color }).eq('id', id))
     )
+    // Push to all connected teammates immediately via broadcast
+    broadcastRef.current?.send({
+      type: 'broadcast',
+      event: 'team_color',
+      payload: { color, memberIds: allIds },
+    })
   }
 
   async function handleInvite(memberId: string) {
