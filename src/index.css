@@ -40,6 +40,7 @@
   --color-col-in-review:   #152660;   /* deep navy  — gate (red-ringed) */
   --color-col-completed:   #16a34a;   /* green      — shipped          */
   --color-col-context:     #9d6b7a;   /* rose-grey  — reference cards  */
+  --color-overdue:         #c2691b;   /* burnt orange — past due       */
 
   /* ── Shadows ──────────────────────────────────────── */
   --shadow-sm:   0 1px 2px rgba(0,0,0,0.4);
