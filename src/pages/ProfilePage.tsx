@@ -42,7 +42,6 @@ export default function ProfilePage() {
   const [confirmLeave, setConfirmLeave] = useState(false)
   const teammatesRef = useRef<TeamMember[]>([])
   const profileRef = useRef(profile)
-  const broadcastRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   useEffect(() => {
     profileRef.current = profile
@@ -103,27 +102,6 @@ export default function ProfilePage() {
     loadTeamTabData()
   }, [userId, activeTab])
 
-  // Broadcast channel — persistent so we can receive AND send team color changes
-  useEffect(() => {
-    if (!userId) return
-    const ch = supabase
-      .channel('team-color-broadcast')
-      .on('broadcast', { event: 'team_color' }, ({ payload }) => {
-        const { color, memberIds } = payload as { color: string; memberIds: string[] }
-        if (memberIds.includes(userId) && profileRef.current) {
-          setProfile({ ...profileRef.current, avatar_color: color })
-        }
-        setTeammates((prev) => prev.map((m) =>
-          memberIds.includes(m.id) ? { ...m, color } : m
-        ))
-        teammatesRef.current = teammatesRef.current.map((m) =>
-          memberIds.includes(m.id) ? { ...m, color } : m
-        )
-      })
-      .subscribe()
-    broadcastRef.current = ch
-    return () => { supabase.removeChannel(ch); broadcastRef.current = null }
-  }, [userId])
 
   async function loadTeamTabData() {
     if (!userId) return
@@ -197,24 +175,6 @@ export default function ProfilePage() {
     setProfile({ ...profile, avatar_color: color })
     setPickerOpen(false)
     await supabase.from('profiles').update({ avatar_color: color }).eq('id', userId)
-  }
-
-  async function handleTeamColorChange(color: string) {
-    if (!userId || !profile) return
-    const currentTeammates = teammatesRef.current
-    setProfile({ ...profile, avatar_color: color })
-    setTeammates((prev) => prev.map((m) => ({ ...m, color })))
-    teammatesRef.current = currentTeammates.map((m) => ({ ...m, color }))
-    const allIds = [userId, ...currentTeammates.map((m) => m.id)]
-    await Promise.all(
-      allIds.map((id) => supabase.from('profiles').update({ avatar_color: color }).eq('id', id))
-    )
-    // Push to all connected teammates immediately via broadcast
-    broadcastRef.current?.send({
-      type: 'broadcast',
-      event: 'team_color',
-      payload: { color, memberIds: allIds },
-    })
   }
 
   async function handleInvite(memberId: string) {
@@ -307,18 +267,18 @@ export default function ProfilePage() {
                   <div className={styles.avatarWrap}>
                     <div
                       ref={avatarRef}
-                      className={`${styles.avatar} ${isInTeam ? styles.avatarLocked : ''}`}
+                      className={styles.avatar}
                       style={{ background: profile?.avatar_color ?? '#6366f1' }}
-                      aria-label={isInTeam ? 'Color managed by team' : 'Pick avatar color'}
-                      role={isInTeam ? undefined : 'button'}
-                      tabIndex={isInTeam ? undefined : 0}
-                      onClick={isInTeam ? undefined : () => {
+                      aria-label="Pick avatar color"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
                         if (pickerOpen) { setPickerOpen(false); return }
                         const rect = avatarRef.current?.getBoundingClientRect()
                         if (rect) setPickerPos({ top: rect.bottom + 10, left: rect.left + rect.width / 2 })
                         setPickerOpen(true)
                       }}
-                      onKeyDown={isInTeam ? undefined : (e) => {
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           const rect = avatarRef.current?.getBoundingClientRect()
                           if (rect) setPickerPos({ top: rect.bottom + 10, left: rect.left + rect.width / 2 })
@@ -326,15 +286,7 @@ export default function ProfilePage() {
                         }
                       }}
                     />
-                    {isInTeam && (
-                      <span
-                        className={styles.avatarLockNote}
-                        onClick={() => setActiveTab('team')}
-                      >
-                        Team tab
-                      </span>
-                    )}
-                    {!isInTeam && pickerOpen && pickerPos && (
+                    {pickerOpen && pickerPos && (
                       <div
                         ref={pickerRef}
                         className={styles.picker}
@@ -499,32 +451,6 @@ export default function ProfilePage() {
                       </div>
                     </section>
 
-                    <section className={styles.card}>
-                      <h2 className={styles.sectionTitle}>Team color</h2>
-                      <p className={styles.teamColorNote}>
-                        Changing this updates everyone's avatar at once.
-                      </p>
-                      <div className={styles.teamColorRow}>
-                        <div
-                          className={styles.teamColorSwatch}
-                          style={{ background: profile?.avatar_color ?? '#6366f1' }}
-                        />
-                        <div className={styles.teamColorPalette}>
-                          {PALETTE.map((c) => (
-                            <button
-                              key={c}
-                              className={styles.swatch}
-                              style={{ background: c }}
-                              aria-label={c}
-                              aria-pressed={profile?.avatar_color === c}
-                              onClick={() => handleTeamColorChange(c)}
-                            >
-                              {profile?.avatar_color === c && <span className={styles.swatchCheck}>✓</span>}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </section>
                   </>
                 )}
 
