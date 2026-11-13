@@ -42,10 +42,11 @@ export default function ProfilePage() {
   const teammatesRef = useRef<TeamMember[]>([])
   const profileRef = useRef(profile)
 
+  useEffect(() => { profileRef.current = profile }, [profile])
+  // Only initialize the name input when the profile identity changes (not on every color/etc update)
   useEffect(() => {
-    profileRef.current = profile
     if (profile) setName(profile.display_name)
-  }, [profile])
+  }, [profile?.id])
 
   useEffect(() => {
     if (!pickerOpen) return

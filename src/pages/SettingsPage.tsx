@@ -56,17 +56,10 @@ export default function SettingsPage() {
   }, [slug, userId])
 
   async function seedPresetLabels(id: string) {
-    const { data: existing } = await supabase
-      .from('labels')
-      .select('name')
-      .eq('board_id', id)
-
-    const existingNames = new Set((existing ?? []).map((l) => l.name))
-    const missing = PRESET_LABELS.filter((name) => !existingNames.has(name))
-    if (missing.length === 0 || !userId) return
-
-    await supabase.from('labels').insert(
-      missing.map((name) => ({ user_id: userId, board_id: id, name, color: DEFAULT_LABEL_COLOR }))
+    if (!userId) return
+    await supabase.from('labels').upsert(
+      PRESET_LABELS.map((name) => ({ user_id: userId, board_id: id, name, color: DEFAULT_LABEL_COLOR })),
+      { onConflict: 'board_id,name', ignoreDuplicates: true },
     )
   }
 
