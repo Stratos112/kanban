@@ -23,8 +23,7 @@ interface TeamMember {
 }
 
 export default function ProfilePage() {
-  const { profile, userId, loading, isGuest, setProfile, hideOthers, setHideOthers, teammateIds, signOut, refreshTeammates } = useAuth()
-  const isInTeam = teammateIds.size > 0
+  const { profile, userId, loading, isGuest, setProfile, hideOthers, setHideOthers, signOut, refreshTeammates } = useAuth()
   const [name, setName] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null)
